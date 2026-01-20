@@ -34,6 +34,15 @@ export async function POST(request: NextRequest) {
         const body: SendRequest = await request.json();
         const { tokens, userIds, broadcast, notification, data } = body;
 
+        const messaging = adminMessaging;
+        if (!messaging) {
+            console.error('Firebase Admin Messaging not initialized');
+            return NextResponse.json(
+                { error: 'Push service unavailable' },
+                { status: 503 }
+            );
+        }
+
         if (!notification?.title || !notification?.body) {
             return NextResponse.json(
                 { error: 'Notification title and body are required' },
@@ -118,7 +127,7 @@ export async function POST(request: NextRequest) {
         const response = await Promise.allSettled(
             targetTokens.map(async (token) => {
                 try {
-                    await adminMessaging.send({
+                    await messaging.send({
                         ...message,
                         token: token,
                     });
