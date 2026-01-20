@@ -1,0 +1,166 @@
+﻿
+> salem-farm-mango@0.1.0 build
+> next build
+
+   Γû▓ Next.js 14.1.0
+   - Environments: .env
+
+   Creating an optimized production build ...
+ Γ£ô Compiled successfully
+   Skipping linting
+   Checking validity of types ...
+   Collecting page data ...
+   Generating static pages (0/45) ...
+node.exe : Admin verify 
+error: ex [Error]: Dynamic 
+server usage: Page couldn't 
+be rendered statically 
+because it used 
+`request.cookies`. See more 
+info here: https://nextjs.org/
+docs/messages/dynamic-server-e
+rror
+At C:\Program 
+Files\nodejs\npm.ps1:29 char:3
++   & $NODE_EXE $NPM_CLI_JS 
+$args
++   
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : 
+    NotSpecified: (Admin ver  
+  ify er...ic-server-error:   
+ String) [], RemoteExcepti    
+on
+    + FullyQualifiedErrorId : 
+    NativeCommandError
+ 
+    at Object.eP [as 
+staticGenerationBailout] (C:\U
+sers\gokul\Downloads\salem_far
+m_mango-main\node_modules\next
+\dist\compiled\next-server\app
+-route.runtime.prod.js:6:29358
+)
+    at i (C:\Users\gokul\Downl
+oads\salem_farm_mango-main\nod
+e_modules\next\dist\compiled\n
+ext-server\app-route.runtime.p
+rod.js:6:34692)
+    at Object.get (C:\Users\go
+kul\Downloads\salem_farm_mango
+-main\node_modules\next\dist\c
+ompiled\next-server\app-route.
+runtime.prod.js:6:34788)
+    at d (C:\Users\gokul\Downl
+oads\salem_farm_mango-main\.ne
+xt\server\app\api\admin\verify
+\route.js:1:583)
+    at C:\Users\gokul\Download
+s\salem_farm_mango-main\node_m
+odules\next\dist\compiled\next
+-server\app-route.runtime.prod
+.js:6:42490
+    at C:\Users\gokul\Download
+s\salem_farm_mango-main\node_m
+odules\next\dist\server\lib\tr
+ace\tracer.js:133:36
+    at 
+NoopContextManager.with (C:\Us
+ers\gokul\Downloads\salem_farm
+_mango-main\node_modules\next\
+dist\compiled\@opentelemetry\a
+pi\index.js:1:7062)
+    at ContextAPI.with (C:\Use
+rs\gokul\Downloads\salem_farm_
+mango-main\node_modules\next\d
+ist\compiled\@opentelemetry\ap
+i\index.js:1:518)
+    at 
+NoopTracer.startActiveSpan (C:
+\Users\gokul\Downloads\salem_f
+arm_mango-main\node_modules\ne
+xt\dist\compiled\@opentelemetr
+y\api\index.js:1:18093)
+    at 
+ProxyTracer.startActiveSpan (C
+:\Users\gokul\Downloads\salem_
+farm_mango-main\node_modules\n
+ext\dist\compiled\@opentelemet
+ry\api\index.js:1:18854) {
+  description: "Page couldn't 
+be rendered statically 
+because it used 
+`request.cookies`. See more 
+info here: https://nextjs.org/
+docs/messages/dynamic-server-e
+rror",
+  digest: 
+'DYNAMIC_SERVER_USAGE'
+}
+
+   Generating static pages (11/45) 
+
+   Generating static pages (22/45) 
+
+   Generating static pages (33/45) 
+
+ Γ£ô Generating static pages (45/45) 
+   Finalizing page optimization ...
+   Collecting build traces ...
+
+Route (app)                              Size     First Load JS
+Γöî ╬╗ /                                    4 kB            145 kB
+Γö£ Γùï /_not-found                          882 B          85.1 kB
+Γö£ Γùï /about                               3.41 kB         132 kB
+Γö£ Γùï /account                             8.17 kB         142 kB
+Γö£ Γùï /admin                               2.93 kB         137 kB
+Γö£ Γùï /admin-login                         2.43 kB        86.7 kB
+Γö£ Γùï /admin/categories                    2.73 kB         137 kB
+Γö£ Γùï /admin/coupons                       2.92 kB         137 kB
+Γö£ Γùï /admin/enquiries                     1.6 kB          136 kB
+Γö£ Γùï /admin/offers                        3.77 kB         143 kB
+Γö£ Γùï /admin/orders                        3.08 kB         137 kB
+Γö£ Γùï /admin/products                      3.98 kB         145 kB
+Γö£ ╬╗ /admin/products/[id]                 3.24 kB         137 kB
+Γö£ Γùï /admin/products/new                  3.01 kB         137 kB
+Γö£ Γùï /admin/settings                      3.24 kB        87.5 kB
+Γö£ Γùï /admin/shipping                      2.34 kB         137 kB
+Γö£ ╬╗ /api/admin/change-password           0 B                0 B
+Γö£ ╬╗ /api/admin/login                     0 B                0 B
+Γö£ ╬╗ /api/admin/logout                    0 B                0 B
+Γö£ ╬╗ /api/admin/products                  0 B                0 B
+Γö£ ╬╗ /api/admin/products/[id]             0 B                0 B
+Γö£ ╬╗ /api/admin/settings                  0 B                0 B
+Γö£ ╬╗ /api/admin/verify                    0 B                0 B
+Γö£ ╬╗ /api/auth/login                      0 B                0 B
+Γö£ ╬╗ /api/auth/reset-password             0 B                0 B
+Γö£ ╬╗ /api/auth/send-otp                   0 B                0 B
+Γö£ ╬╗ /api/auth/signup                     0 B                0 B
+Γö£ ╬╗ /api/auth/verify-otp                 0 B                0 B
+Γö£ ╬╗ /api/create-order                    0 B                0 B
+Γö£ ╬╗ /api/send-email                      0 B                0 B
+Γö£ ╬╗ /api/send-sms                        0 B                0 B
+Γö£ Γùï /auth                                4.56 kB         139 kB
+Γö£ Γùï /cart                                3.56 kB        98.6 kB
+Γö£ Γùï /checkout                            9.02 kB         147 kB
+Γö£ Γùï /contact                             2.3 kB         86.5 kB
+Γö£ Γùï /faq                                 2.33 kB        86.6 kB
+Γö£ Γùï /more/bulk-enquiry                   2.52 kB         137 kB
+Γö£ Γùï /more/corporate-gifts                2.53 kB         137 kB
+Γö£ Γùï /more/share                          5.47 kB         152 kB
+Γö£ Γùï /offers                              2.82 kB         142 kB
+Γö£ Γùï /privacy                             149 B          84.4 kB
+Γö£ ╬╗ /product/[slug]                      4.05 kB         145 kB
+Γö£ Γùï /returns                             149 B          84.4 kB
+Γö£ Γùï /shipping                            149 B          84.4 kB
+Γö£ ╬╗ /shop                                3.97 kB        95.5 kB
+Γöö Γùï /terms                               149 B          84.4 kB
++ First Load JS shared by all            84.2 kB
+  Γö£ chunks/69-4cdc100346ce0e98.js        28.9 kB
+  Γö£ chunks/fd9d1056-7fa5ec8491e7e8ff.js  53.4 kB
+  Γöö other shared chunks (total)          1.96 kB
+
+
+Γùï  (Static)   prerendered as static content
+╬╗  (Dynamic)  server-rendered on demand using Node.js
+
