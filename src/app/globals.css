@@ -117,7 +117,7 @@ h6 {
     }
 }
 
-@media (min-width: 768px) {
+@media (min-width: 1024px) {
     .hidden-mobile {
         display: flex !important;
     }

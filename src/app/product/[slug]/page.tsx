@@ -8,6 +8,7 @@ import { supabase } from '@/lib/supabase';
 import { notFound } from 'next/navigation';
 import { ProductCard } from '@/components/common/ProductCard';
 import { ProductGallery } from '@/components/product/ProductGallery';
+import { WatchingNow } from '@/components/product/WatchingNow';
 
 
 export const dynamic = 'force-dynamic';
@@ -241,6 +242,7 @@ export default async function ProductPage({ params }: { params: { slug: string }
                         </div>
 
                         {/* Interactive Actions */}
+                        <WatchingNow />
                         <ProductActions product={displayProduct} />
 
                         {/* Description & Features */}

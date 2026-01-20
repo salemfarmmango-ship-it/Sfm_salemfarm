@@ -14,6 +14,14 @@ export default function AdminDashboard() {
     const [recentOrders, setRecentOrders] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [dateFilter, setDateFilter] = useState(new Date().toISOString().split('T')[0]);
+    const [isMobile, setIsMobile] = useState(false);
+
+    useEffect(() => {
+        const checkMobile = () => setIsMobile(window.innerWidth < 768);
+        checkMobile();
+        window.addEventListener('resize', checkMobile);
+        return () => window.removeEventListener('resize', checkMobile);
+    }, []);
 
     useEffect(() => {
         fetchDashboardData(dateFilter);
@@ -100,7 +108,14 @@ export default function AdminDashboard() {
 
     return (
         <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-8)' }}>
+            <div style={{
+                display: 'flex',
+                flexDirection: isMobile ? 'column' : 'row',
+                justifyContent: 'space-between',
+                alignItems: isMobile ? 'flex-start' : 'center',
+                marginBottom: 'var(--space-8)',
+                gap: isMobile ? '1rem' : '0'
+            }}>
                 <h1>Dashboard Overview</h1>
                 <input
                     type="date"
@@ -112,49 +127,61 @@ export default function AdminDashboard() {
                         borderRadius: 'var(--radius-md)',
                         outline: 'none',
                         color: 'var(--text-primary)',
-                        background: 'var(--bg-primary)'
+                        background: 'var(--bg-primary)',
+                        width: isMobile ? '100%' : 'auto'
                     }}
                 />
             </div>
 
             {/* Stats Grid */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 'var(--space-8)', marginBottom: 'var(--space-12)' }}>
+            <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                gap: isMobile ? 'var(--space-4)' : 'var(--space-8)',
+                marginBottom: 'var(--space-12)'
+            }}>
                 <StatCard title="Total Revenue" value={`₹${stats.revenue.toLocaleString('en-IN')}`} icon={<BadgeDollarSign />} color="green" />
                 <StatCard title="Total Orders" value={stats.orders.toString()} icon={<ShoppingBag />} color="blue" />
                 <StatCard title="Total Products" value={stats.products.toString()} icon={<Package />} color="orange" />
                 <StatCard title="Total Customers" value={stats.customers.toString()} icon={<Users />} color="purple" />
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: 'var(--space-8)' }}>
+            <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 300px), 1fr))',
+                gap: 'var(--space-8)'
+            }}>
                 {/* Recent Orders */}
-                <div className="card" style={{ padding: 'var(--space-6)' }}>
+                <div className="card" style={{ padding: isMobile ? 'var(--space-4)' : 'var(--space-6)', overflowX: 'auto' }}>
                     <h3 style={{ marginBottom: '1rem' }}>Recent Orders</h3>
                     {recentOrders.length === 0 ? (
                         <p style={{ color: 'var(--text-secondary)', textAlign: 'center', padding: '2rem' }}>
                             No orders yet
                         </p>
                     ) : (
-                        <table style={{ width: '100%', fontSize: '0.9rem' }}>
-                            <thead>
-                                <tr style={{ textAlign: 'left', color: 'var(--text-secondary)' }}>
-                                    <th style={{ paddingBottom: '0.5rem' }}>Order</th>
-                                    <th style={{ paddingBottom: '0.5rem' }}>Customer</th>
-                                    <th style={{ paddingBottom: '0.5rem' }}>Status</th>
-                                    <th style={{ paddingBottom: '0.5rem', textAlign: 'right' }}>Amount</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {recentOrders.map((order) => (
-                                    <OrderRow
-                                        key={order.id}
-                                        id={`#${order.id}`}
-                                        customer={(order.profiles as any)?.full_name || 'Guest'}
-                                        status={order.status}
-                                        amount={`₹${order.total_amount.toLocaleString('en-IN')}`}
-                                    />
-                                ))}
-                            </tbody>
-                        </table>
+                        <div style={{ overflowX: 'auto' }}>
+                            <table style={{ width: '100%', fontSize: '0.9rem', minWidth: '450px' }}>
+                                <thead>
+                                    <tr style={{ textAlign: 'left', color: 'var(--text-secondary)' }}>
+                                        <th style={{ paddingBottom: '0.5rem' }}>Order</th>
+                                        <th style={{ paddingBottom: '0.5rem' }}>Customer</th>
+                                        <th style={{ paddingBottom: '0.5rem' }}>Status</th>
+                                        <th style={{ paddingBottom: '0.5rem', textAlign: 'right' }}>Amount</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {recentOrders.map((order) => (
+                                        <OrderRow
+                                            key={order.id}
+                                            id={`#${order.id}`}
+                                            customer={(order.profiles as any)?.full_name || 'Guest'}
+                                            status={order.status}
+                                            amount={`₹${order.total_amount.toLocaleString('en-IN')}`}
+                                        />
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
                     )}
                 </div>
             </div>

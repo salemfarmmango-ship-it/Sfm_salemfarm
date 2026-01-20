@@ -14,10 +14,15 @@ export default function AdminProductsPage() {
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedIds, setSelectedIds] = useState<number[]>([]);
     const [currentPage, setCurrentPage] = useState(1);
+    const [isMobile, setIsMobile] = useState(false);
     const itemsPerPage = 25;
 
     useEffect(() => {
+        const checkMobile = () => setIsMobile(window.innerWidth < 1024);
+        checkMobile();
+        window.addEventListener('resize', checkMobile);
         fetchProducts();
+        return () => window.removeEventListener('resize', checkMobile);
     }, []);
 
     // Reset page when search or data changes
@@ -148,15 +153,31 @@ export default function AdminProductsPage() {
 
     return (
         <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-8)' }}>
+            <div style={{
+                display: 'flex',
+                flexDirection: isMobile ? 'column' : 'row',
+                justifyContent: 'space-between',
+                alignItems: isMobile ? 'flex-start' : 'center',
+                marginBottom: 'var(--space-8)',
+                gap: isMobile ? '1rem' : '0'
+            }}>
                 <h1>Products ({products.length})</h1>
-                <Link href="/admin/products/new"><Button>+ Add Product</Button></Link>
+                <Link href="/admin/products/new" style={{ width: isMobile ? '100%' : 'auto' }}>
+                    <Button style={{ width: isMobile ? '100%' : 'auto' }}>+ Add Product</Button>
+                </Link>
             </div>
 
             {/* Actions Bar */}
-            <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{
+                display: 'flex',
+                flexDirection: isMobile ? 'column' : 'row',
+                gap: '1rem',
+                marginBottom: '1.5rem',
+                alignItems: isMobile ? 'stretch' : 'center',
+                justifyContent: 'space-between'
+            }}>
                 {/* Search */}
-                <div style={{ position: 'relative', width: '300px', maxWidth: '100%' }}>
+                <div style={{ position: 'relative', width: isMobile ? '100%' : '300px' }}>
                     <Search size={18} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: '#9ca3af' }} />
                     <input
                         type="text"
@@ -169,14 +190,24 @@ export default function AdminProductsPage() {
                             paddingLeft: '2.5rem',
                             border: '1px solid var(--border-light)',
                             borderRadius: '0.5rem',
-                            outline: 'none'
+                            outline: 'none',
+                            background: 'white'
                         }}
                     />
                 </div>
 
                 {/* Bulk Actions */}
                 {selectedIds.length > 0 && (
-                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', background: '#f3f4f6', padding: '0.5rem', borderRadius: '0.5rem' }}>
+                    <div style={{
+                        display: 'flex',
+                        gap: '0.5rem',
+                        alignItems: 'center',
+                        background: '#f3f4f6',
+                        padding: '0.5rem',
+                        borderRadius: '0.5rem',
+                        overflowX: 'auto',
+                        whiteSpace: 'nowrap'
+                    }}>
                         <span style={{ fontSize: '0.9rem', fontWeight: '600', marginRight: '0.5rem' }}>{selectedIds.length} Selected</span>
 
                         <button onClick={() => handleBulkUpdate('is_featured', true)} title="Mark as Featured" style={{ padding: '0.5rem', border: '1px solid #d1d5db', borderRadius: '0.25rem', background: 'white', cursor: 'pointer' }}>
@@ -214,7 +245,7 @@ export default function AdminProductsPage() {
                 </div>
             ) : (
                 <div className="card" style={{ padding: '0', overflowX: 'auto', marginBottom: '1rem' }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: isMobile ? '800px' : 'auto' }}>
                         <thead>
                             <tr style={{ background: 'var(--color-gray-50)', textAlign: 'left' }}>
                                 <th style={{ padding: '1rem', width: '40px' }}>

@@ -16,8 +16,20 @@ export default function AdminLayout({
     const [loading, setLoading] = useState(true);
     const [authenticated, setAuthenticated] = useState(false);
 
+    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+    const [isMobile, setIsMobile] = useState(false);
+
     useEffect(() => {
+        const checkMobile = () => {
+            setIsMobile(window.innerWidth < 1024);
+            if (window.innerWidth >= 1024) setIsSidebarOpen(true);
+            else setIsSidebarOpen(false);
+        };
+
+        checkMobile();
+        window.addEventListener('resize', checkMobile);
         verifyAdmin();
+        return () => window.removeEventListener('resize', checkMobile);
     }, []);
 
     const verifyAdmin = async () => {
@@ -67,21 +79,76 @@ export default function AdminLayout({
     ];
 
     return (
-        <div style={{ display: 'flex', minHeight: '100vh' }}>
+        <div style={{ display: 'flex', minHeight: '100vh', flexDirection: isMobile ? 'column' : 'row' }}>
+            {/* Mobile Header */}
+            {isMobile && (
+                <header style={{
+                    height: '64px',
+                    background: 'var(--color-mango-900)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    padding: '0 1.25rem',
+                    justifyContent: 'space-between',
+                    position: 'sticky',
+                    top: 0,
+                    zIndex: 100,
+                    boxShadow: '0 2px 10px rgba(0,0,0,0.2)'
+                }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', color: 'white' }}>
+                        <span style={{ fontSize: '1.5rem' }}>🥭</span>
+                        <div style={{ fontWeight: 'bold' }}>Admin Panel</div>
+                    </div>
+                    <button
+                        onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                        style={{
+                            background: 'none',
+                            border: 'none',
+                            color: 'white',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                        }}
+                    >
+                        {isSidebarOpen ? '✕' : <BarChart size={24} style={{ transform: 'rotate(90deg)' }} />}
+                    </button>
+                </header>
+            )}
+
+            {/* Admin Sidebar Backdrop (Mobile Only) */}
+            {isMobile && isSidebarOpen && (
+                <div
+                    onClick={() => setIsSidebarOpen(false)}
+                    style={{
+                        position: 'fixed',
+                        inset: 0,
+                        background: 'rgba(0,0,0,0.5)',
+                        zIndex: 90
+                    }}
+                />
+            )}
+
             {/* Admin Sidebar */}
             <aside style={{
-                width: '260px',
+                width: isMobile ? '280px' : '260px',
+                position: isMobile ? 'fixed' : 'sticky',
+                top: 0,
+                bottom: 0,
+                left: isMobile && !isSidebarOpen ? '-280px' : '0',
                 background: 'linear-gradient(180deg, var(--color-mango-800) 0%, var(--color-mango-900) 100%)',
                 color: 'white',
                 padding: 'var(--space-6)',
                 display: 'flex',
                 flexDirection: 'column',
-                boxShadow: '2px 0 10px rgba(0,0,0,0.1)'
+                boxShadow: '2px 0 10px rgba(0,0,0,0.1)',
+                zIndex: 110,
+                transition: 'left 0.3s ease',
+                height: isMobile ? '100vh' : 'auto'
             }}>
                 <div style={{
                     fontSize: '1.5rem',
                     fontWeight: 'bold',
-                    marginBottom: 'var(--space-12)',
+                    marginBottom: isMobile ? 'var(--space-8)' : 'var(--space-12)',
                     display: 'flex',
                     alignItems: 'center',
                     gap: '0.75rem',
@@ -97,13 +164,14 @@ export default function AdminLayout({
                     </div>
                 </div>
 
-                <nav style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', flex: 1 }}>
+                <nav style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', flex: 1, overflowY: 'auto' }}>
                     {navItems.map(item => {
                         const isActive = pathname === item.href;
                         return (
                             <Link
                                 key={item.href}
                                 href={item.href}
+                                onClick={() => isMobile && setIsSidebarOpen(false)}
                                 style={{
                                     display: 'flex',
                                     alignItems: 'center',
@@ -173,8 +241,9 @@ export default function AdminLayout({
             <main style={{
                 flex: 1,
                 background: '#f9fafb',
-                padding: 'var(--space-8)',
-                overflow: 'auto'
+                padding: isMobile ? 'var(--space-4)' : 'var(--space-8)',
+                overflowX: 'hidden',
+                width: '100%'
             }}>
                 <AdminRealtimeNotifier />
                 {children}

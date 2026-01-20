@@ -9,9 +9,14 @@ export default function AdminCategoriesPage() {
     const [showAddModal, setShowAddModal] = useState(false);
     const [editingCategory, setEditingCategory] = useState<any>(null);
     const [formData, setFormData] = useState({ name: '', slug: '', image_url: '' });
+    const [isMobile, setIsMobile] = useState(false);
 
     useEffect(() => {
+        const checkMobile = () => setIsMobile(window.innerWidth < 768);
+        checkMobile();
+        window.addEventListener('resize', checkMobile);
         fetchCategories();
+        return () => window.removeEventListener('resize', checkMobile);
     }, []);
 
     const fetchCategories = async () => {
@@ -111,9 +116,19 @@ export default function AdminCategoriesPage() {
 
     return (
         <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-8)' }}>
+            <div style={{
+                display: 'flex',
+                flexDirection: isMobile ? 'column' : 'row',
+                justifyContent: 'space-between',
+                alignItems: isMobile ? 'flex-start' : 'center',
+                marginBottom: 'var(--space-8)',
+                gap: isMobile ? '1rem' : '0'
+            }}>
                 <h1>Categories ({categories.length})</h1>
-                <Button onClick={() => { setShowAddModal(true); setEditingCategory(null); setFormData({ name: '', slug: '', image_url: '' }); }}>
+                <Button
+                    onClick={() => { setShowAddModal(true); setEditingCategory(null); setFormData({ name: '', slug: '', image_url: '' }); }}
+                    style={{ width: isMobile ? '100%' : 'auto' }}
+                >
                     + Add Category
                 </Button>
             </div>
@@ -131,7 +146,7 @@ export default function AdminCategoriesPage() {
                     justifyContent: 'center',
                     zIndex: 1000
                 }}>
-                    <div className="card" style={{ padding: '2rem', maxWidth: '500px', width: '90%' }}>
+                    <div className="card" style={{ padding: '2rem', maxWidth: '500px', width: '90%', maxHeight: '95vh', overflowY: 'auto' }}>
                         <h2 style={{ marginBottom: '1.5rem' }}>{editingCategory ? 'Edit Category' : 'Add New Category'}</h2>
                         <form onSubmit={handleSubmit}>
                             <div style={{ marginBottom: '1rem' }}>
@@ -152,7 +167,8 @@ export default function AdminCategoriesPage() {
                                         width: '100%',
                                         padding: '0.75rem',
                                         border: '1px solid var(--border-light)',
-                                        borderRadius: '0.5rem'
+                                        borderRadius: '0.5rem',
+                                        background: 'white'
                                     }}
                                 />
                             </div>
@@ -167,7 +183,8 @@ export default function AdminCategoriesPage() {
                                         width: '100%',
                                         padding: '0.75rem',
                                         border: '1px solid var(--border-light)',
-                                        borderRadius: '0.5rem'
+                                        borderRadius: '0.5rem',
+                                        background: 'white'
                                     }}
                                 />
                             </div>
@@ -182,7 +199,8 @@ export default function AdminCategoriesPage() {
                                         width: '100%',
                                         padding: '0.75rem',
                                         border: '1px solid var(--border-light)',
-                                        borderRadius: '0.5rem'
+                                        borderRadius: '0.5rem',
+                                        background: 'white'
                                     }}
                                 />
                             </div>
@@ -207,8 +225,8 @@ export default function AdminCategoriesPage() {
                 </div>
             )}
 
-            <div className="card" style={{ padding: '0' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <div className="card" style={{ padding: '0', overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: isMobile ? '600px' : 'auto' }}>
                     <thead>
                         <tr style={{ background: 'var(--color-gray-50)', textAlign: 'left' }}>
                             <th style={{ padding: '1rem' }}>Image</th>

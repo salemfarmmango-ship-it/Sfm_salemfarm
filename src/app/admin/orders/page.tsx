@@ -22,6 +22,14 @@ export default function AdminOrdersPage() {
     const [dateFilter, setDateFilter] = useState(new Date().toISOString().split('T')[0]); // Default to Today
     const [selectedOrderIds, setSelectedOrderIds] = useState<number[]>([]);
     const [bulkUpdating, setBulkUpdating] = useState(false);
+    const [isMobile, setIsMobile] = useState(false);
+
+    useEffect(() => {
+        const checkMobile = () => setIsMobile(window.innerWidth < 1024);
+        checkMobile();
+        window.addEventListener('resize', checkMobile);
+        return () => window.removeEventListener('resize', checkMobile);
+    }, []);
 
     // Printing state
     const [printData, setPrintData] = useState<any[]>([]);
@@ -459,9 +467,21 @@ export default function AdminOrdersPage() {
                     </div>
                 ))}
             </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-8)' }}>
+            <div style={{
+                display: 'flex',
+                flexDirection: isMobile ? 'column' : 'row',
+                justifyContent: 'space-between',
+                alignItems: isMobile ? 'stretch' : 'center',
+                marginBottom: 'var(--space-8)',
+                gap: isMobile ? '1rem' : '0'
+            }}>
                 <h1 style={{ margin: 0 }}>Manage Orders ({totalOrders})</h1>
-                <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                <div style={{
+                    display: 'flex',
+                    flexDirection: isMobile ? 'column' : 'row',
+                    gap: isMobile ? '0.5rem' : '1rem',
+                    alignItems: isMobile ? 'stretch' : 'center'
+                }}>
                     <div style={{
                         display: 'flex',
                         alignItems: 'center',
@@ -470,7 +490,8 @@ export default function AdminOrdersPage() {
                         padding: '0.4rem 0.8rem',
                         borderRadius: '0.5rem',
                         border: '1px solid var(--border-light)',
-                        boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+                        boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                        width: isMobile ? '100%' : 'auto'
                     }}>
                         <Filter size={16} style={{ color: 'var(--text-secondary)' }} />
                         <select
@@ -483,7 +504,8 @@ export default function AdminOrdersPage() {
                                 fontSize: '0.9rem',
                                 cursor: 'pointer',
                                 color: 'var(--text-main)',
-                                paddingRight: '0.5rem'
+                                paddingRight: '0.5rem',
+                                flex: 1
                             }}
                         >
                             <option value="">All Statuses</option>
@@ -503,7 +525,8 @@ export default function AdminOrdersPage() {
                         padding: '0.4rem 0.8rem',
                         borderRadius: '0.5rem',
                         border: '1px solid var(--border-light)',
-                        boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+                        boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                        width: isMobile ? '100%' : 'auto'
                     }}>
                         <input
                             type="date"
@@ -515,7 +538,8 @@ export default function AdminOrdersPage() {
                                 outline: 'none',
                                 fontSize: '0.9rem',
                                 color: 'var(--text-main)',
-                                fontFamily: 'inherit'
+                                fontFamily: 'inherit',
+                                flex: 1
                             }}
                         />
                         {dateFilter && (
@@ -532,7 +556,7 @@ export default function AdminOrdersPage() {
                         variant="outline"
                         onClick={handleExportCSV}
                         disabled={exporting || orders.length === 0}
-                        style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+                        style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', width: isMobile ? '100%' : 'auto', justifyContent: 'center' }}
                     >
                         <Download size={18} />
                         {exporting ? 'Exporting...' : 'Export CSV'}
@@ -545,19 +569,26 @@ export default function AdminOrdersPage() {
                 <div style={{
                     background: '#f0fdf4',
                     border: '1px solid #bbf7d0',
-                    padding: '1rem 1.5rem',
+                    padding: isMobile ? '1rem' : '1rem 1.5rem',
                     borderRadius: '0.75rem',
                     marginBottom: '1.5rem',
                     display: 'flex',
+                    flexDirection: isMobile ? 'column' : 'row',
                     justifyContent: 'space-between',
-                    alignItems: 'center',
-                    boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)'
+                    alignItems: isMobile ? 'stretch' : 'center',
+                    boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)',
+                    gap: isMobile ? '1rem' : '0'
                 }}>
                     <div style={{ fontWeight: '600', color: '#166534', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                         <CheckSquare size={20} />
                         {selectedOrderIds.length} orders selected
                     </div>
-                    <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                    <div style={{
+                        display: 'flex',
+                        flexDirection: isMobile ? 'column' : 'row',
+                        gap: '1rem',
+                        alignItems: isMobile ? 'stretch' : 'center'
+                    }}>
                         <Button
                             size="sm"
                             onClick={handlePrintLabels}
@@ -568,54 +599,70 @@ export default function AdminOrdersPage() {
                                 gap: '0.5rem',
                                 background: '#166534',
                                 color: 'white',
-                                border: 'none'
+                                border: 'none',
+                                justifyContent: 'center'
                             }}
                         >
                             <Printer size={16} />
                             {isPrinting ? 'Preparing...' : 'Print Labels'}
                         </Button>
 
-                        <div style={{ width: '1px', height: '24px', background: '#bbf7d0' }}></div>
+                        {!isMobile && <div style={{ width: '1px', height: '24px', background: '#bbf7d0' }}></div>}
 
-                        <span style={{ fontSize: '0.9rem', color: '#15803d', fontWeight: '500' }}>Bulk Update Status:</span>
-                        <div style={{ display: 'flex', gap: '0.5rem' }}>
-                            {['pending', 'processing', 'shipped', 'delivered', 'cancelled'].map(status => (
-                                <Button
-                                    key={status}
-                                    size="sm"
-                                    onClick={() => handleBulkStatusUpdate(status)}
-                                    disabled={bulkUpdating}
-                                    variant="outline"
-                                    style={{
-                                        textTransform: 'capitalize',
-                                        fontSize: '0.85rem',
-                                        padding: '0.4rem 0.8rem',
-                                        background: 'white',
-                                        borderColor: '#bbf7d0',
-                                        color: '#15803d'
-                                    }}
-                                >
-                                    {status}
-                                </Button>
-                            ))}
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', alignItems: 'center' }}>
+                            <span style={{ fontSize: '0.9rem', color: '#15803d', fontWeight: '500' }}>Update Status:</span>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                                {['pending', 'processing', 'shipped', 'delivered', 'cancelled'].map(status => (
+                                    <Button
+                                        key={status}
+                                        size="sm"
+                                        onClick={() => handleBulkStatusUpdate(status)}
+                                        disabled={bulkUpdating}
+                                        variant="outline"
+                                        style={{
+                                            textTransform: 'capitalize',
+                                            fontSize: '0.85rem',
+                                            padding: '0.4rem 0.6rem',
+                                            background: 'white',
+                                            borderColor: '#bbf7d0',
+                                            color: '#15803d',
+                                            flex: isMobile ? '1 1 calc(50% - 0.5rem)' : 'auto'
+                                        }}
+                                    >
+                                        {status}
+                                    </Button>
+                                ))}
+                            </div>
                         </div>
-                        <button
-                            onClick={() => setSelectedOrderIds([])}
-                            style={{
-                                background: '#dcfce7',
-                                border: 'none',
-                                color: '#15803d',
-                                cursor: 'pointer',
-                                marginLeft: '1rem',
-                                padding: '0.25rem',
-                                borderRadius: '50%',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center'
-                            }}
-                        >
-                            <X size={20} />
-                        </button>
+
+                        {isMobile ? (
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setSelectedOrderIds([])}
+                                style={{ color: '#dc2626', borderColor: '#fee2e2' }}
+                            >
+                                Clear Selection
+                            </Button>
+                        ) : (
+                            <button
+                                onClick={() => setSelectedOrderIds([])}
+                                style={{
+                                    background: '#dcfce7',
+                                    border: 'none',
+                                    color: '#15803d',
+                                    cursor: 'pointer',
+                                    marginLeft: '1rem',
+                                    padding: '0.25rem',
+                                    borderRadius: '50%',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center'
+                                }}
+                            >
+                                <X size={20} />
+                            </button>
+                        )}
                     </div>
                 </div>
             )}
@@ -637,7 +684,7 @@ export default function AdminOrdersPage() {
             ) : (
                 <>
                     <div className="card" style={{ padding: '0', overflowX: 'auto', marginBottom: '1.5rem' }}>
-                        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: isMobile ? '900px' : 'auto' }}>
                             <thead>
                                 <tr style={{ background: 'var(--color-gray-50)', textAlign: 'left' }}>
                                     <th style={{ padding: '1rem', width: '50px' }}>
