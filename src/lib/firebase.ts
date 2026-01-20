@@ -19,7 +19,18 @@ export function getFirebaseApp(): FirebaseApp | undefined {
     if (typeof window === 'undefined') return undefined;
 
     if (!getApps().length) {
-        app = initializeApp(firebaseConfig);
+        // Diagnostic Logging
+        if (!firebaseConfig.projectId) {
+            console.error('Firebase Error: NEXT_PUBLIC_FIREBASE_PROJECT_ID is missing from environment variables.');
+        }
+
+        try {
+            app = initializeApp(firebaseConfig);
+            console.log('Firebase App initialized successfully');
+        } catch (error) {
+            console.error('Firebase initialization error:', error);
+            return undefined;
+        }
     } else {
         app = getApps()[0];
     }
