@@ -9,6 +9,7 @@ import { notFound } from 'next/navigation';
 import { ProductCard } from '@/components/common/ProductCard';
 import { ProductGallery } from '@/components/product/ProductGallery';
 import { WatchingNow } from '@/components/product/WatchingNow';
+import { ProductSpecifications } from '@/components/product/ProductSpecifications';
 
 
 export const dynamic = 'force-dynamic';
@@ -72,7 +73,8 @@ export default async function ProductPage({ params }: { params: { slug: string }
         .from('products')
         .select('*, categories(name)')
         .neq('id', productId)
-        .limit(4);
+        .neq('id', productId)
+        .limit(12);
 
     // Fetch stats for related products
     const relatedIds = relatedData?.map(p => p.id) || [];
@@ -142,7 +144,8 @@ export default async function ProductPage({ params }: { params: { slug: string }
         badgeLabel: badgeLabel,
         sku: `SFM-${product.id.toString().padStart(4, '0')}`, // Fake SKU
         highlights: product.highlights || [],
-        images: product.images || []
+        images: product.images || [],
+        specifications: product.specifications || []
     };
 
     const discountPercentage = Math.round(((displayProduct.originalPrice - displayProduct.price) / displayProduct.originalPrice) * 100);
@@ -245,46 +248,61 @@ export default async function ProductPage({ params }: { params: { slug: string }
                         <WatchingNow />
                         <ProductActions product={displayProduct} />
 
-                        {/* Description & Features */}
-                        <div style={{ marginTop: '3rem' }}>
-                            <h3 style={{ fontSize: '1.25rem', fontWeight: '700', marginBottom: '1rem', borderBottom: '2px solid #e5e7eb', paddingBottom: '0.5rem', display: 'inline-block' }}>
-                                Product Highlights
-                            </h3>
 
-                            {displayProduct.highlights && displayProduct.highlights.length > 0 ? (
-                                <ul style={{ listStyleType: 'disc', paddingLeft: '1.5rem', color: '#374151', fontSize: '1rem', lineHeight: '1.6' }}>
-                                    {displayProduct.highlights.map((highlight: string, index: number) => (
-                                        <li key={index} style={{ marginBottom: '0.5rem' }}>{highlight}</li>
-                                    ))}
-                                </ul>
-                            ) : (
-                                <div style={{ display: 'grid', gridTemplateColumns: 'minmax(150px, 1fr) 2fr', gap: '1rem 2rem', fontSize: '1rem', color: '#4b5563', marginTop: '1rem' }}>
-                                    <div style={{ fontWeight: '600', color: '#9ca3af' }}>Type</div>
-                                    <div>{displayProduct.category}</div>
-
-                                    <div style={{ fontWeight: '600', color: '#9ca3af' }}>Quantity</div>
-                                    <div>{product.size || '1Kg'}</div>
-
-                                    <div style={{ fontWeight: '600', color: '#9ca3af' }}>Origin</div>
-                                    <div>Salem, Tamil Nadu</div>
-
-                                    <div style={{ fontWeight: '600', color: '#9ca3af' }}>Quality</div>
-                                    <div>{displayProduct.features.join(', ')}</div>
-                                </div>
-                            )}
-
-                            <h3 style={{ fontSize: '1.25rem', fontWeight: '700', marginBottom: '1rem', borderBottom: '2px solid #e5e7eb', paddingBottom: '0.5rem', display: 'inline-block', marginTop: '2.5rem' }}>
-                                Description
-                            </h3>
-                            <p style={{ lineHeight: '1.8', color: '#374151', fontSize: '1.05rem' }}>
-                                {displayProduct.description}
-                            </p>
-                        </div>
 
                         {/* Trust Elements */}
-                        <TrustElements />
-
+                        <div style={{ marginTop: '1.5rem' }}>
+                            <TrustElements />
+                        </div>
                     </div>
+                </div>
+
+                {/* Full Width Details Section */}
+                <div style={{ marginTop: '4rem', maxWidth: '100%' }}>
+                    {/* Description & Features */}
+                    <div style={{ marginTop: '3rem' }}>
+                        <h3 style={{ fontSize: '1.25rem', fontWeight: '700', marginBottom: '1rem', borderBottom: '3px solid #16a34a', paddingBottom: '0.5rem', display: 'inline-block' }}>
+                            Product Highlights
+                        </h3>
+
+                        {displayProduct.highlights && displayProduct.highlights.length > 0 ? (
+                            <ul style={{ listStyleType: 'disc', paddingLeft: '1.5rem', color: '#374151', fontSize: '1rem', lineHeight: '1.6' }}>
+                                {displayProduct.highlights.map((highlight: string, index: number) => (
+                                    <li key={index} style={{ marginBottom: '0.5rem' }}>{highlight}</li>
+                                ))}
+                            </ul>
+                        ) : (
+                            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(140px, auto) 1fr', gap: '1rem 2rem', fontSize: '1rem', color: '#374151', marginTop: '1.5rem' }}>
+                                <div style={{ fontWeight: '700', color: '#15803d', display: 'flex', alignItems: 'center' }}>Type</div>
+                                <div style={{ borderBottom: '1px solid #f3f4f6', paddingBottom: '0.75rem' }}>{displayProduct.category}</div>
+
+                                <div style={{ fontWeight: '700', color: '#15803d', display: 'flex', alignItems: 'center' }}>Quantity</div>
+                                <div style={{ borderBottom: '1px solid #f3f4f6', paddingBottom: '0.75rem' }}>{product.size || '1Kg'}</div>
+
+                                <div style={{ fontWeight: '700', color: '#15803d', display: 'flex', alignItems: 'center' }}>Origin</div>
+                                <div style={{ borderBottom: '1px solid #f3f4f6', paddingBottom: '0.75rem' }}>Salem, Tamil Nadu</div>
+
+                                <div style={{ fontWeight: '700', color: '#15803d', display: 'flex', alignItems: 'center' }}>Quality</div>
+                                <div style={{ borderBottom: '1px solid #f3f4f6', paddingBottom: '0.75rem' }}>{displayProduct.features.join(', ')}</div>
+                            </div>
+                        )}
+
+                        <h3 style={{ fontSize: '1.25rem', fontWeight: '700', marginBottom: '1rem', borderBottom: '3px solid #16a34a', paddingBottom: '0.5rem', display: 'inline-block', marginTop: '2.5rem' }}>
+                            Description
+                        </h3>
+                        <div
+                            className="product-description"
+                            style={{ lineHeight: '1.8', color: '#374151', fontSize: '1.05rem' }}
+                            dangerouslySetInnerHTML={{ __html: displayProduct.description }}
+                        />
+                    </div>
+
+                    {/* Product Specifications Table */}
+                    <ProductSpecifications
+                        productName={displayProduct.name}
+                        specifications={displayProduct.specifications}
+                    />
+
                 </div>
 
                 {/* Reviews & Related */}
@@ -298,7 +316,7 @@ export default async function ProductPage({ params }: { params: { slug: string }
                 {/* Related Products Section */}
                 {relatedProducts.length > 0 && (
                     <div className="container" style={{ marginTop: '2rem' }}>
-                        <h2 style={{ fontSize: '1.75rem', marginBottom: '2rem', fontWeight: '700' }}>Similar Products</h2>
+                        <h2 style={{ fontSize: '1.75rem', marginBottom: '2rem', fontWeight: '700', borderBottom: '3px solid #16a34a', paddingBottom: '0.5rem', display: 'inline-block' }}>Similar Products</h2>
                         <div className="shop-product-grid">
                             {relatedProducts.map(p => (
                                 <ProductCard key={p.id} product={p} />

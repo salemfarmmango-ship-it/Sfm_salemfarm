@@ -21,7 +21,7 @@ const SLIDES = [
         id: 2,
         image: '/hero-mango-model.png',
         bgImage: '/Yellow_hero_2.png',
-        title: 'Morning Plucked Freshness',
+        title: 'Daily Plucked Freshness',
         subtitle: 'Direct from trees to your doorstep within hours',
         price: 'Starts from ₹179',
         ctaLink: '/shop?category=Mangoes',

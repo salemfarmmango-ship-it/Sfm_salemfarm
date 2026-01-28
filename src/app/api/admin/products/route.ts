@@ -22,7 +22,9 @@ export async function POST(request: Request) {
                 is_featured: body.is_featured || false,
                 season_over: body.season_over || false,
                 original_price: body.original_price, // Added Regular Price
-                images: body.images || []
+                images: body.images || [],
+                highlights: body.highlights || [],
+                specifications: body.specifications || []
             })
             .select()
             .single();

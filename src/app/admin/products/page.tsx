@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
 import { supabase } from '@/lib/supabase';
-import { Search, Trash2, Star, CalendarOff, CheckSquare, Square } from 'lucide-react';
+import { Search, Trash2, Star, CalendarOff, CheckSquare, Square, Filter } from 'lucide-react';
 import { MangoLoader } from '@/components/common/MangoLoader';
 
 export default function AdminProductsPage() {
@@ -15,6 +15,8 @@ export default function AdminProductsPage() {
     const [selectedIds, setSelectedIds] = useState<number[]>([]);
     const [currentPage, setCurrentPage] = useState(1);
     const [isMobile, setIsMobile] = useState(false);
+    const [categories, setCategories] = useState<any[]>([]);
+    const [selectedCategory, setSelectedCategory] = useState<string>('all');
     const itemsPerPage = 25;
 
     useEffect(() => {
@@ -22,13 +24,13 @@ export default function AdminProductsPage() {
         checkMobile();
         window.addEventListener('resize', checkMobile);
         fetchProducts();
+        fetchCategories();
         return () => window.removeEventListener('resize', checkMobile);
     }, []);
 
-    // Reset page when search or data changes
     useEffect(() => {
         setCurrentPage(1);
-    }, [searchQuery]);
+    }, [searchQuery, selectedCategory]);
 
     const fetchProducts = async () => {
         try {
@@ -48,6 +50,18 @@ export default function AdminProductsPage() {
             console.error('Error fetching products:', error);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const fetchCategories = async () => {
+        try {
+            const { data } = await supabase
+                .from('categories')
+                .select('*')
+                .order('name');
+            setCategories(data || []);
+        } catch (error) {
+            console.error('Error fetching categories:', error);
         }
     };
 
@@ -106,10 +120,12 @@ export default function AdminProductsPage() {
     };
 
     // Filter products first
-    const filteredProducts = products.filter(p =>
-        p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (p.categories as any)?.name?.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    const filteredProducts = products.filter(p => {
+        const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            (p.categories as any)?.name?.toLowerCase().includes(searchQuery.toLowerCase());
+        const matchesCategory = selectedCategory === 'all' || p.category_id?.toString() === selectedCategory;
+        return matchesSearch && matchesCategory;
+    });
 
     // Then paginate
     const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
@@ -194,6 +210,31 @@ export default function AdminProductsPage() {
                             background: 'white'
                         }}
                     />
+                </div>
+
+                {/* Category Filter */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <Filter size={18} style={{ color: '#6b7280' }} />
+                    <select
+                        value={selectedCategory}
+                        onChange={(e) => setSelectedCategory(e.target.value)}
+                        style={{
+                            padding: '0.5rem 0.75rem',
+                            border: '1px solid var(--border-light)',
+                            borderRadius: '0.5rem',
+                            background: 'white',
+                            outline: 'none',
+                            fontSize: '0.9rem',
+                            minWidth: '150px'
+                        }}
+                    >
+                        <option value="all">All Categories</option>
+                        {categories.map(cat => (
+                            <option key={cat.id} value={cat.id.toString()}>
+                                {cat.name}
+                            </option>
+                        ))}
+                    </select>
                 </div>
 
                 {/* Bulk Actions */}

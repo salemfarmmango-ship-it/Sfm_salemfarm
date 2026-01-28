@@ -3,7 +3,14 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
 import { supabase } from '@/lib/supabase';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2 } from 'lucide-react';
+import { RichTextEditor } from '@/components/admin/RichTextEditor';
+
+
+interface Specification {
+    label: string;
+    value: string;
+}
 
 export default function AddProductPage() {
     const router = useRouter();
@@ -26,6 +33,7 @@ export default function AddProductPage() {
         original_price: '',
         highlights: ''
     });
+    const [specifications, setSpecifications] = useState<Specification[]>([]);
 
     useEffect(() => {
         fetchCategories();
@@ -53,6 +61,7 @@ export default function AddProductPage() {
             ].map(url => url.trim()).filter(url => url !== '');
 
             const highlights = formData.highlights.split('\n').map(h => h.trim()).filter(h => h !== '');
+            const validSpecs = specifications.filter(s => s.label.trim() && s.value.trim());
 
             const response = await fetch('/api/admin/products', {
                 method: 'POST',
@@ -70,7 +79,8 @@ export default function AddProductPage() {
                     season_over: formData.season_over,
                     original_price: formData.original_price ? parseFloat(formData.original_price) : null,
                     images: images,
-                    highlights: highlights
+                    highlights: highlights,
+                    specifications: validSpecs
                 }),
             });
 
@@ -131,23 +141,14 @@ export default function AddProductPage() {
                             />
                         </div>
 
+
+
                         {/* Description */}
                         <div>
-                            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
-                                Description
-                            </label>
-                            <textarea
+                            <RichTextEditor
+                                label="Description"
                                 value={formData.description}
-                                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                                rows={4}
-                                placeholder="Brief description of the product..."
-                                style={{
-                                    width: '100%',
-                                    padding: '0.75rem',
-                                    border: '1px solid var(--border-light)',
-                                    borderRadius: '0.5rem',
-                                    fontFamily: 'inherit'
-                                }}
+                                onChange={(value) => setFormData({ ...formData, description: value })}
                             />
                         </div>
 
@@ -301,6 +302,93 @@ export default function AddProductPage() {
                                     fontFamily: 'inherit'
                                 }}
                             />
+                        </div>
+
+                        {/* Product Specifications */}
+                        <div>
+                            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
+                                Product Specifications
+                            </label>
+                            <p style={{ fontSize: '0.85rem', color: '#6b7280', marginBottom: '1rem' }}>
+                                Add specification rows (e.g., &quot;Shelf Life&quot; → &quot;1-3 days after ripening&quot;)
+                            </p>
+
+                            {specifications.map((spec, index) => (
+                                <div key={index} style={{ display: 'flex', gap: '0.75rem', marginBottom: '0.75rem', alignItems: 'center' }}>
+                                    <input
+                                        type="text"
+                                        value={spec.label}
+                                        onChange={(e) => {
+                                            const newSpecs = [...specifications];
+                                            newSpecs[index].label = e.target.value;
+                                            setSpecifications(newSpecs);
+                                        }}
+                                        placeholder="Label (e.g., Shelf Life)"
+                                        style={{
+                                            flex: 1,
+                                            padding: '0.625rem',
+                                            border: '1px solid var(--border-light)',
+                                            borderRadius: '0.375rem',
+                                            fontSize: '0.9rem'
+                                        }}
+                                    />
+                                    <input
+                                        type="text"
+                                        value={spec.value}
+                                        onChange={(e) => {
+                                            const newSpecs = [...specifications];
+                                            newSpecs[index].value = e.target.value;
+                                            setSpecifications(newSpecs);
+                                        }}
+                                        placeholder="Value (e.g., 1-3 days)"
+                                        style={{
+                                            flex: 2,
+                                            padding: '0.625rem',
+                                            border: '1px solid var(--border-light)',
+                                            borderRadius: '0.375rem',
+                                            fontSize: '0.9rem'
+                                        }}
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setSpecifications(specifications.filter((_, i) => i !== index));
+                                        }}
+                                        style={{
+                                            padding: '0.5rem',
+                                            background: '#fee2e2',
+                                            border: 'none',
+                                            borderRadius: '0.375rem',
+                                            cursor: 'pointer',
+                                            color: '#dc2626'
+                                        }}
+                                    >
+                                        <Trash2 size={16} />
+                                    </button>
+                                </div>
+                            ))}
+
+                            <button
+                                type="button"
+                                onClick={() => setSpecifications([...specifications, { label: '', value: '' }])}
+                                style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '0.5rem',
+                                    padding: '0.625rem 1rem',
+                                    border: '1px dashed #d1d5db',
+                                    borderRadius: '0.375rem',
+                                    background: '#f9fafb',
+                                    cursor: 'pointer',
+                                    fontSize: '0.9rem',
+                                    color: '#374151',
+                                    width: '100%',
+                                    justifyContent: 'center'
+                                }}
+                            >
+                                <Plus size={16} />
+                                Add Row
+                            </button>
                         </div>
 
                         {/* Checkboxes */}
