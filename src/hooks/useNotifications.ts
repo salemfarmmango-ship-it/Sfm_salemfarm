@@ -52,7 +52,13 @@ export function useNotifications(): UseNotificationsReturn {
         if (status !== 'default') return;
 
         // Check if user has dismissed the prompt before
-        const dismissed = localStorage.getItem(PROMPT_DISMISSED_KEY);
+        let dismissed = null;
+        try {
+            dismissed = localStorage.getItem(PROMPT_DISMISSED_KEY);
+        } catch (e) {
+            console.warn('LocalStorage access denied for notification prompt', e);
+        }
+
         console.log('Checking prompt display conditions:', { isSupported, status, dismissed });
         if (dismissed) return;
 
@@ -127,7 +133,11 @@ export function useNotifications(): UseNotificationsReturn {
     // Dismiss the prompt
     const dismissPrompt = useCallback(() => {
         setShowPrompt(false);
-        localStorage.setItem(PROMPT_DISMISSED_KEY, 'true');
+        try {
+            localStorage.setItem(PROMPT_DISMISSED_KEY, 'true');
+        } catch (e) {
+            console.warn('Failed to save prompt dismissal', e);
+        }
     }, []);
 
     return {

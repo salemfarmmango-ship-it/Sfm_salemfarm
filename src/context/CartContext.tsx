@@ -31,13 +31,17 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
 
     // Load from local storage on mount
     useEffect(() => {
-        const saved = localStorage.getItem('cart');
-        if (saved) {
-            try {
-                setItems(JSON.parse(saved));
-            } catch (e) {
-                console.error('Failed to parse cart', e);
+        try {
+            const saved = localStorage.getItem('cart');
+            if (saved) {
+                try {
+                    setItems(JSON.parse(saved));
+                } catch (e) {
+                    console.error('Failed to parse cart', e);
+                }
             }
+        } catch (e) {
+            console.warn('LocalStorage access denied', e);
         }
         setIsInitialized(true);
     }, []);
@@ -45,7 +49,11 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
     // Save to local storage on change
     useEffect(() => {
         if (isInitialized) {
-            localStorage.setItem('cart', JSON.stringify(items));
+            try {
+                localStorage.setItem('cart', JSON.stringify(items));
+            } catch (e) {
+                console.warn('Failed to save cart to LocalStorage', e);
+            }
         }
     }, [items, isInitialized]);
 
