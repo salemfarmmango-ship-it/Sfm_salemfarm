@@ -1,6 +1,7 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import { Star, User, X, CheckCircle } from 'lucide-react';
+import { Star, ThumbsUp, User, X, CheckCircle } from 'lucide-react';
+import { formatDate } from '@/lib/dateUtils';
 import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/Button';
 
@@ -160,7 +161,7 @@ export const ReviewSection = ({ productId }: { productId: number }) => {
                                             </div>
                                             <p style={{ color: 'var(--text-secondary)', lineHeight: '1.6' }}>{review.comment}</p>
                                             <div style={{ fontSize: '0.8rem', color: '#999', marginTop: '0.5rem' }}>
-                                                {new Date(review.created_at).toLocaleDateString()}
+                                                {formatDate(review.created_at)}
                                             </div>
                                         </div>
                                     ))}

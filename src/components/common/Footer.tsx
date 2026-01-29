@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { getCurrentYear } from '@/lib/dateUtils';
 import Image from 'next/image';
 import { Mail, Phone, MapPin } from 'lucide-react';
 
@@ -157,7 +158,7 @@ export const Footer = () => {
                     fontSize: "0.8rem",
                 }}
             >
-                © {new Date().getFullYear()} Salem Farm Mango. All rights reserved.
+                © {getCurrentYear()} Salem Farm Mango. All rights reserved.
                 <br />
                 <strong>
                     Developed by{" "}

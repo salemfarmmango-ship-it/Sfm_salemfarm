@@ -3,6 +3,7 @@ import React, { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Package, MapPin, User as UserIcon, LogOut, ChevronRight, Clock, CheckCircle2, Truck, XCircle, Info, Plus } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { formatDate } from '@/lib/dateUtils';
 import { Button } from '@/components/ui/Button';
 import { MangoLoader } from '@/components/common/MangoLoader';
 
@@ -261,7 +262,7 @@ function AccountContent() {
                     <div style="text-align: right;">
                         <div class="invoice-title">INVOICE</div>
                         <p>#${order.id.toString().padStart(6, '0')}</p>
-                        <p>${new Date(order.created_at).toLocaleDateString()}</p>
+                        <p>${formatDate(order.created_at)}</p>
                     </div>
                 </div>
 
@@ -525,7 +526,7 @@ function AccountContent() {
                                                 <tr key={order.id} style={{ borderTop: '1px solid var(--border-light)' }}>
                                                     <td style={{ padding: '1.25rem 1.5rem', fontWeight: '500' }}>#{order.id.toString().padStart(6, '0')}</td>
                                                     <td style={{ padding: '1.25rem 1.5rem', color: 'var(--text-secondary)' }}>
-                                                        {new Date(order.created_at).toLocaleDateString()}
+                                                        {formatDate(order.created_at)}
                                                     </td>
                                                     <td style={{ padding: '1.25rem 1.5rem' }}>
                                                         <span style={{
