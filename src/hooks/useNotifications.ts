@@ -32,7 +32,10 @@ export function useNotifications(): UseNotificationsReturn {
 
         const checkSupport = () => {
             const supported = 'Notification' in window && 'serviceWorker' in navigator;
-            console.log('Notification support checked:', { supported, permission: Notification.permission });
+            console.log('Notification support checked:', {
+                supported,
+                permission: supported ? Notification.permission : 'unavailable'
+            });
             setIsSupported(supported);
 
             if (supported) {
@@ -81,10 +84,14 @@ export function useNotifications(): UseNotificationsReturn {
 
                 // Create a custom toast notification
                 if ('Notification' in window && Notification.permission === 'granted') {
-                    new Notification(title || 'Salem Farm Mango', {
-                        body: body || 'You have a new notification',
-                        icon: '/logo.png',
-                    });
+                    try {
+                        new Notification(title || 'Salem Farm Mango', {
+                            body: body || 'You have a new notification',
+                            icon: '/logo.png',
+                        });
+                    } catch (e) {
+                        console.error('Error showing notification', e);
+                    }
                 }
             }
         });
@@ -119,7 +126,10 @@ export function useNotifications(): UseNotificationsReturn {
 
                 return true;
             } else {
-                setStatus(Notification.permission as NotificationStatus);
+                // Check if Notification exists before accessing permission
+                if ('Notification' in window) {
+                    setStatus(Notification.permission as NotificationStatus);
+                }
                 return false;
             }
         } catch (error) {
