@@ -545,7 +545,17 @@ function AccountContent() {
                                                         </span>
                                                     </td>
                                                     <td style={{ padding: '1.25rem 1.5rem', fontWeight: 'bold' }}>₹{order.total_amount}</td>
-                                                    <td style={{ padding: '1.25rem 1.5rem', textAlign: 'right' }}>
+                                                    <td style={{ padding: '1.25rem 1.5rem', textAlign: 'right', display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+                                                        {order.tracking_id && order.courier_partner && (
+                                                            <a
+                                                                href={order.courier_partner === 'Delhivery' ? `https://www.delhivery.com/track/package/${order.tracking_id}` : 'https://stcourier.com/track/shipment'}
+                                                                target="_blank"
+                                                                rel="noopener noreferrer"
+                                                                style={{ textDecoration: 'none' }}
+                                                            >
+                                                                <Button variant="outline" size="sm" style={{ borderColor: '#16a34a', color: '#16a34a' }}>Track</Button>
+                                                            </a>
+                                                        )}
                                                         <Button variant="outline" size="sm" onClick={() => setViewOrder(order)}>Details</Button>
                                                     </td>
                                                 </tr>
@@ -601,6 +611,37 @@ function AccountContent() {
                                         <span>Status</span>
                                         <span style={{ textTransform: 'capitalize' }}>{viewOrder.status}</span>
                                     </div>
+
+                                    {viewOrder.tracking_id && viewOrder.courier_partner && (
+                                        <div style={{ marginBottom: '1.5rem', padding: '1rem', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '0.5rem' }}>
+                                            <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '0.9rem', color: '#166534' }}>Tracking Information</h4>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                                                <span style={{ fontSize: '0.9rem' }}>Courier: <strong>{viewOrder.courier_partner}</strong></span>
+                                                <span style={{ fontSize: '0.9rem' }}>Tracking ID: <strong>{viewOrder.tracking_id}</strong></span>
+                                            </div>
+                                            <a
+                                                href={viewOrder.courier_partner === 'Delhivery'
+                                                    ? `https://www.delhivery.com/track/package/${viewOrder.tracking_id}`
+                                                    : 'https://stcourier.com/track/shipment'}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                style={{
+                                                    display: 'inline-block',
+                                                    width: '100%',
+                                                    textAlign: 'center',
+                                                    padding: '0.5rem',
+                                                    background: '#16a34a',
+                                                    color: 'white',
+                                                    textDecoration: 'none',
+                                                    borderRadius: '0.25rem',
+                                                    fontSize: '0.9rem',
+                                                    fontWeight: '600'
+                                                }}
+                                            >
+                                                Track Package
+                                            </a>
+                                        </div>
+                                    )}
 
                                     <Button onClick={() => handleDownloadInvoice(viewOrder)} style={{ width: '100%' }}>
                                         Download Invoice

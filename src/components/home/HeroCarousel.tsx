@@ -15,7 +15,7 @@ const SLIDES = [
         bgColor: '#F0F4E3',
         badge: 'Season Special',
         badgeColor: '#f59e0b',
-        bgPositionDesktop: 'right 12% top'
+        bgPositionDesktop: 'right top'
     },
     {
         id: 2,
@@ -28,7 +28,7 @@ const SLIDES = [
         bgColor: '#FEFCE8',
         badge: 'Farm Fresh',
         badgeColor: '#4d7c0f',
-        bgPositionDesktop: 'right 12% -20px'
+        bgPositionDesktop: 'center top'
     },
     {
         id: 3,
@@ -41,7 +41,7 @@ const SLIDES = [
         bgColor: '#ECFDF5',
         badge: 'Fast Shipping',
         badgeColor: '#10b981',
-        bgPositionDesktop: 'right 12% -10px'
+        bgPositionDesktop: 'center top'
     }
 ];
 
@@ -142,7 +142,7 @@ export const HeroCarousel = () => {
                                 backgroundColor: slide.bgColor,
                                 backgroundImage: `url(${slide.bgImage})`,
                                 backgroundSize: 'cover',
-                                backgroundPosition: isMobile ? 'center' : slide.bgPositionDesktop,
+                                backgroundPosition: isMobile ? 'center top' : slide.bgPositionDesktop,
                                 backgroundRepeat: 'no-repeat'
                             }}>
                                 {/* Overlay to ensure text readability */}

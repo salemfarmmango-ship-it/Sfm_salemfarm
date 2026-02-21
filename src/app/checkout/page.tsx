@@ -26,6 +26,8 @@ export default function CheckoutPage() {
     const [couponMessage, setCouponMessage] = useState({ type: '', text: '' });
     const [shippingRates, setShippingRates] = useState<any[]>([]);
     const [currentShippingCost, setCurrentShippingCost] = useState(0);
+    const [isCalculatingShipping, setIsCalculatingShipping] = useState(false);
+    const [isShippingReady, setIsShippingReady] = useState(false);
 
     const subtotal = items.reduce((acc: number, i: CartItem) => acc + i.price * i.quantity, 0);
     // Shipping calculated dynamically now
@@ -86,20 +88,56 @@ export default function CheckoutPage() {
         }
 
         let state = '';
+        let pincode = '';
         if (selectedAddressId === 'new') {
             state = newAddress.state;
+            pincode = newAddress.postal_code;
         } else {
             const addr = addresses.find(a => a.id === selectedAddressId);
-            if (addr) state = addr.state;
+            if (addr) {
+                state = addr.state;
+                pincode = addr.postal_code;
+            }
         }
 
-        if (state) {
-            const rate = shippingRates.find(r => r.state_name === state);
-            setCurrentShippingCost(rate ? rate.charge : 150); // Default 150 if not found
+        if (state && pincode && pincode.length >= 6) {
+            const fetchDynamicShipping = async () => {
+                setIsCalculatingShipping(true);
+                try {
+                    const res = await fetch('/api/shipping/calculate', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ state, pincode, items })
+                    });
+                    const data = await res.json();
+                    if (data.fee !== undefined) {
+                        setCurrentShippingCost(data.fee);
+                    } else {
+                        // fallback local matching logic
+                        const rate = shippingRates.find(r => r.state_name === state);
+                        setCurrentShippingCost(rate ? rate.charge : 150);
+                    }
+                } catch (e) {
+                    console.error('Failed to calculate shipping', e);
+                    const rate = shippingRates.find(r => r.state_name === state);
+                    setCurrentShippingCost(rate ? rate.charge : 150);
+                } finally {
+                    setIsCalculatingShipping(false);
+                    setIsShippingReady(true);
+                }
+            };
+
+            const debounceTimer = setTimeout(() => {
+                fetchDynamicShipping();
+            }, 800);
+            return () => clearTimeout(debounceTimer);
+
         } else {
-            setCurrentShippingCost(150); // Default
+            setIsShippingReady(false);
+            setCurrentShippingCost(0); // Require full pincode input
         }
-    }, [selectedAddressId, newAddress.state, addresses, shippingRates, items.length]);
+    }, [selectedAddressId, newAddress.state, newAddress.postal_code, addresses, shippingRates, items]);
+
 
     const fetchAddresses = async (userId: string) => {
         const { data } = await supabase
@@ -283,6 +321,22 @@ export default function CheckoutPage() {
                         console.error('Error saving order items:', JSON.stringify(itemsError, null, 2));
                         // Order was created, just items failed - don't block success
                     }
+
+                    // Auto-book with Delhivery (fire-and-forget, don't block checkout success)
+                    fetch('/api/admin/orders/book', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ orderId: data.id })
+                    })
+                        .then(res => res.json())
+                        .then(bookingData => {
+                            if (bookingData.success) {
+                                console.log('Delhivery auto-booked! Tracking ID:', bookingData.tracking_id);
+                            } else {
+                                console.log('Delhivery auto-booking skipped:', bookingData.error);
+                            }
+                        })
+                        .catch(err => console.error('Delhivery auto-booking failed:', err));
 
                     // Success!
                     // Send confirmation based on user's signup method
@@ -656,7 +710,7 @@ export default function CheckoutPage() {
                         </div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', fontSize: '0.9rem' }}>
                             <span>Shipping</span>
-                            <span>{items.length ? `₹${currentShippingCost}` : '₹0'}</span>
+                            <span>{isCalculatingShipping ? 'Calculating...' : (isShippingReady ? `₹${currentShippingCost}` : 'Enter Pincode')}</span>
                         </div>
                         {discount > 0 && (
                             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', color: '#166534', fontSize: '0.9rem' }}>

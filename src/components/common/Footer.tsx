@@ -11,18 +11,28 @@ export const Footer = () => {
     const [submitting, setSubmitting] = useState(false);
     const [message, setMessage] = useState({ text: '', type: '' });
 
+    const [isMobile, setIsMobile] = useState(false);
+
     useEffect(() => {
-        const fetchSettings = async () => {
-            try {
-                const res = await fetch('/api/settings');
-                const data = await res.json();
-                setSettings(data.settings || {});
-            } catch (err) {
-                console.error('Failed to fetch footer settings', err);
-            } finally {
-                setLoading(false);
-            }
-        };
+        const checkMobile = () => setIsMobile(window.innerWidth < 1024);
+        checkMobile();
+        window.addEventListener('resize', checkMobile);
+        return () => window.removeEventListener('resize', checkMobile);
+    }, []);
+
+    const fetchSettings = async () => {
+        try {
+            const res = await fetch('/api/settings');
+            const data = await res.json();
+            setSettings(data.settings || {});
+        } catch (err) {
+            console.error('Failed to fetch footer settings', err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
         fetchSettings();
     }, []);
 
@@ -59,10 +69,9 @@ export const Footer = () => {
         <footer style={{ background: 'var(--color-green-50)', color: 'var(--color-green-900)', paddingTop: 'var(--space-16)', paddingBottom: 'var(--space-8)' }}>
             <div className="container" style={{
                 display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-                gap: 'var(--space-8)',
+                gridTemplateColumns: isMobile ? '1fr' : '1.2fr 1fr 1.4fr 1.4fr',
+                gap: isMobile ? '2rem' : '2.5rem',
                 alignItems: 'start',
-                justifyContent: 'space-between'
             }}>
 
                 <div style={{ flex: 1 }}>

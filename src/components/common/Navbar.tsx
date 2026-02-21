@@ -84,7 +84,7 @@ export const Navbar = () => {
     const navLinks = [
         { href: '/', label: 'Home', icon: Home },
         { href: '/shop', label: 'Shop', icon: Store },
-        { href: '/about', label: 'Our Farm', icon: Sprout },
+        { href: '/about', label: 'About Us', icon: UserCircle },
         { href: '/contact', label: 'Contact', icon: Phone }
     ];
 

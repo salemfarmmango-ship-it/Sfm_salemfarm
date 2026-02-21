@@ -6,6 +6,10 @@ import { supabase } from '@/lib/supabase';
 import { ProductCard, ProductCardProps } from '@/components/common/ProductCard';
 import { HeroCarousel } from '@/components/home/HeroCarousel';
 import { ProductGrid } from '@/components/home/ProductGrid';
+import { TrustFeatures } from '@/components/home/TrustFeatures';
+import { ProductCarousel } from '@/components/home/ProductCarousel';
+import { PromoImageGrid } from '@/components/home/PromoImageGrid';
+import { CategoryGrid } from '@/components/home/CategoryGrid';
 
 // Helper to map DB to UI
 const mapProduct = (p: any, statsMap: Map<number, any>): ProductCardProps => {
@@ -81,115 +85,58 @@ export default async function Home() {
     const categories = dbCategories || [];
 
     return (
-        <main>
+        <main style={{ background: '#f8f9fa' }}>
             {/* Hero Carousel */}
             <HeroCarousel />
 
-            {/* Featured Products */}
-            <section className="section-padding" style={{ background: 'var(--color-green-50)' }}>
-                <div className="container">
-                    <h2 style={{ textAlign: 'center', marginBottom: 'var(--space-12)' }}>Customer Favorites</h2>
-                    <div className="customer-favorites-grid" style={{ display: 'grid', gap: 'var(--space-8)' }}>
-                        {featuredProducts.map(product => (
-                            <ProductCard key={product.id} product={product} />
-                        ))}
-                    </div>
-                </div>
-            </section>
+            {/* 3-Panel Promo Image Grid */}
+            <PromoImageGrid />
 
-            {/* Featured Categories - Modern Cards */}
-            <section className="section-padding" style={{ borderTop: '1px solid var(--border-light)' }}>
-                <div className="container">
-                    <h2 style={{ textAlign: 'center', marginBottom: 'var(--space-12)' }}>Our Categories</h2>
+            {/* Featured Products Carousel */}
+            <ProductCarousel
+                title="Customer Favorites"
+                products={featuredProducts}
+                viewAllLink="/shop?category=Featured"
+            />
 
-                    <div className="categories-grid">
-                        {categories.map((cat, index) => (
-                            <Link href={`/shop?category=${encodeURIComponent(cat.name)}`} key={cat.id} className="category-card-wrapper" style={{ textDecoration: 'none', color: 'inherit' }}>
-                                <div className="card card-hover" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-                                    <div style={{
-                                        height: '160px',
-                                        background: 'var(--color-gray-100)',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        fontSize: '3rem',
-                                        color: 'var(--color-mango-300)',
-                                        overflow: 'hidden',
-                                        position: 'relative'
-                                    }}>
-                                        {cat.image_url ? (
-                                            <img src={cat.image_url} alt={cat.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                        ) : (
-                                            <div style={{
-                                                width: '100%',
-                                                height: '100%',
-                                                background: `linear-gradient(45deg, var(--color-mango-50), var(--color-mango-100))`,
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'center'
-                                            }}>
-                                                {
-                                                    cat.name.toLowerCase().includes('mango') ? '🥭' :
-                                                        cat.name.toLowerCase().includes('pickle') ? '🥒' :
-                                                            cat.name.toLowerCase().includes('spice') ? '🌶️' :
-                                                                cat.name.toLowerCase().includes('oil') ? '🥥' :
-                                                                    cat.name.toLowerCase().includes('rice') ? '🌾' :
-                                                                        cat.name.toLowerCase().includes('snack') ? '🍪' : '📦'
-                                                }
-                                            </div>
-                                        )}
-                                    </div>
-                                    <div style={{ padding: '1rem', flex: 1, display: 'flex', flexDirection: 'column' }}>
-                                        <h3 style={{ fontSize: '1.1rem', marginBottom: '0.5rem', lineHeight: '1.3' }}>{cat.name}</h3>
-                                        <div style={{ marginTop: 'auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                            <span style={{ color: 'var(--color-mango-600)', fontWeight: '600', fontSize: '0.85rem' }}>
-                                                View Products
-                                            </span>
-                                            <span style={{
-                                                width: '28px',
-                                                height: '28px',
-                                                background: 'var(--color-green-50)',
-                                                color: 'var(--color-green-600)',
-                                                borderRadius: '50%',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'center'
-                                            }}>
-                                                <ArrowRight size={14} />
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </Link>
-                        ))}
+            {/* Trust Signals */}
+            <TrustFeatures />
+
+            {/* Featured Categories - Modern Circular/Rounded Grid */}
+            <section className="section-padding" style={{ background: 'white' }}>
+                <div className="container">
+                    <div style={{ textAlign: 'center', marginBottom: 'var(--space-12)' }}>
+                        <h2 style={{
+                            fontSize: '2rem',
+                            color: 'var(--color-green-900)',
+                            marginBottom: '0.5rem'
+                        }}>Shop by Category</h2>
+                        <p style={{ color: 'var(--text-secondary)' }}>Explore our wide range of fresh produce</p>
                     </div>
+
+                    <CategoryGrid categories={categories} />
 
                     <div style={{ marginTop: 'var(--space-12)', textAlign: 'center' }}>
-                        <Link href="/shop" className="btn" style={{
-                            padding: '1rem 2.5rem',
-                            fontSize: '1.1rem',
-                            background: 'var(--color-green-700)',
-                            color: 'white',
-                            borderRadius: '9999px',
-                            fontWeight: '600',
-                            letterSpacing: '0.5px',
-                            boxShadow: '0 4px 12px rgba(21, 128, 61, 0.3)',
-                            border: '2px solid transparent',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '0.5rem',
-                            transition: 'all 0.3s ease'
+                        <Link href="/shop" className="btn btn-primary" style={{
+                            padding: '0.8rem 2.5rem',
+                            borderRadius: '50px',
+                            boxShadow: '0 4px 12px rgba(230, 149, 0, 0.3)'
                         }}>
-                            View Full Catalog <ArrowRight size={18} />
+                            View Full Catalog
                         </Link>
                     </div>
                 </div>
             </section>
 
             {/* Fresh Arrivals Section */}
-            <section className="section-padding" style={{ borderTop: '1px solid var(--border-light)', background: 'white' }}>
+            <section className="section-padding" style={{ background: '#f8f9fa', borderTop: '1px solid var(--border-light)' }}>
                 <div className="container">
-                    <h2 style={{ textAlign: 'center', marginBottom: 'var(--space-12)' }}>Our Fresh Products</h2>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-8)' }}>
+                        <h2 style={{ fontSize: '2rem', color: 'var(--color-green-900)' }}>Fresh Arrivals</h2>
+                        <Link href="/shop?sort=newest" style={{ color: 'var(--color-green-700)', fontWeight: '600', fontSize: '0.9rem' }}>
+                            View All
+                        </Link>
+                    </div>
                     <ProductGrid initialProducts={recentProducts} />
                 </div>
             </section>

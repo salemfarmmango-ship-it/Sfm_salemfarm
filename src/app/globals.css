@@ -53,9 +53,9 @@
     --space-20: 5rem;
     --space-24: 6rem;
 
-    /* Typography */
-    --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
-    --font-serif: 'Merriweather', serif;
+    /* Typography — Corporate stack */
+    --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    --font-serif: 'DM Serif Display', Georgia, serif;
 }
 
 * {
@@ -67,11 +67,16 @@
 html,
 body {
     font-family: var(--font-sans);
+    font-size: 16px;
+    font-weight: 400;
+    letter-spacing: -0.01em;
     color: var(--text-primary);
     background: var(--bg-primary);
-    line-height: 1.5;
+    line-height: 1.6;
     overflow-x: hidden;
     width: 100%;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
 }
 
 a {
@@ -86,8 +91,22 @@ h4,
 h5,
 h6 {
     font-family: var(--font-serif);
-    font-weight: 700;
+    font-weight: 400;
+    letter-spacing: -0.02em;
     color: var(--text-accent);
+    line-height: 1.2;
+}
+
+/* Corporate body text fine-tuning */
+p,
+span,
+li,
+label,
+input,
+textarea,
+select,
+button {
+    font-family: var(--font-sans);
 }
 
 .container {
@@ -138,6 +157,17 @@ h6 {
     cursor: pointer;
     border: none;
     font-size: 1rem;
+    white-space: nowrap;
+}
+
+/* Hide Scrollbar */
+.hide-scrollbar::-webkit-scrollbar {
+    display: none;
+}
+
+.hide-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
 }
 
 .btn-primary {
@@ -998,16 +1028,71 @@ h6 {
         grid-template-columns: 1fr;
     }
 }
+
 /* Rich Text Content Styles */
-.product-description h1, .product-description h2, .product-description h3, .product-description h4, .product-description h5, .product-description h6 { margin-top: 1.5rem; margin-bottom: 0.75rem; color: var(--text-heading); font-family: var(--font-header); font-weight: 700; line-height: 1.25; }
-.product-description h1 { font-size: 1.875rem; }
-.product-description h2 { font-size: 1.5rem; }
-.product-description h3 { font-size: 1.25rem; }
-.product-description p { margin-bottom: 1rem; line-height: 1.75; }
-.product-description ul, .product-description ol { margin-bottom: 1rem; padding-left: 1.5rem; }
-.product-description ul { list-style-type: disc; }
-.product-description ol { list-style-type: decimal; }
-.product-description li { margin-bottom: 0.5rem; }
-.product-description strong { font-weight: 600; color: var(--text-heading); }
-.product-description em { font-style: italic; }
-.product-description blockquote { border-left: 4px solid var(--primary-color); padding-left: 1rem; margin-left: 0; margin-bottom: 1rem; font-style: italic; color: var(--text-muted); }
+.product-description h1,
+.product-description h2,
+.product-description h3,
+.product-description h4,
+.product-description h5,
+.product-description h6 {
+    margin-top: 1.5rem;
+    margin-bottom: 0.75rem;
+    color: var(--text-heading);
+    font-family: var(--font-header);
+    font-weight: 700;
+    line-height: 1.25;
+}
+
+.product-description h1 {
+    font-size: 1.875rem;
+}
+
+.product-description h2 {
+    font-size: 1.5rem;
+}
+
+.product-description h3 {
+    font-size: 1.25rem;
+}
+
+.product-description p {
+    margin-bottom: 1rem;
+    line-height: 1.75;
+}
+
+.product-description ul,
+.product-description ol {
+    margin-bottom: 1rem;
+    padding-left: 1.5rem;
+}
+
+.product-description ul {
+    list-style-type: disc;
+}
+
+.product-description ol {
+    list-style-type: decimal;
+}
+
+.product-description li {
+    margin-bottom: 0.5rem;
+}
+
+.product-description strong {
+    font-weight: 600;
+    color: var(--text-heading);
+}
+
+.product-description em {
+    font-style: italic;
+}
+
+.product-description blockquote {
+    border-left: 4px solid var(--primary-color);
+    padding-left: 1rem;
+    margin-left: 0;
+    margin-bottom: 1rem;
+    font-style: italic;
+    color: var(--text-muted);
+}

@@ -10,6 +10,13 @@ export default function AdminOrdersPage() {
     const [loading, setLoading] = useState(true);
     const [viewingOrder, setViewingOrder] = useState<any>(null);
     const [orderItems, setOrderItems] = useState<any[]>([]);
+    const [trackingId, setTrackingId] = useState('');
+    const [courierPartner, setCourierPartner] = useState('');
+    const [savingTracking, setSavingTracking] = useState(false);
+
+    // Delhivery Automation State
+    const [bookingDelhivery, setBookingDelhivery] = useState(false);
+    const [fetchingLabel, setFetchingLabel] = useState(false);
 
     // Pagination state
     const [currentPage, setCurrentPage] = useState(1);
@@ -318,8 +325,90 @@ export default function AdminOrdersPage() {
 
             setOrderItems(data || []);
             setViewingOrder(order);
+            setTrackingId(order.tracking_id || '');
+            setCourierPartner(order.courier_partner || '');
         } catch (error: any) {
             alert(`Failed to load order details: ${error.message}`);
+        }
+    };
+
+    const handleSaveTracking = async () => {
+        if (!viewingOrder) return;
+        setSavingTracking(true);
+        try {
+            const res = await fetch('/api/admin/orders/tracking', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    orderId: viewingOrder.id,
+                    tracking_id: trackingId,
+                    courier_partner: courierPartner
+                })
+            });
+
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Failed to update tracking');
+
+            setOrders(orders.map(o => o.id === viewingOrder.id ? { ...o, tracking_id: trackingId, courier_partner: courierPartner } : o));
+            setViewingOrder({ ...viewingOrder, tracking_id: trackingId, courier_partner: courierPartner });
+            alert('Tracking details saved successfully.');
+        } catch (error: any) {
+            alert(`Failed to save tracking info: ${error.message}`);
+        } finally {
+            setSavingTracking(false);
+        }
+    };
+
+    const handleAutoBookDelhivery = async () => {
+        if (!viewingOrder) return;
+        setBookingDelhivery(true);
+        try {
+            const res = await fetch('/api/admin/orders/book', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ orderId: viewingOrder.id })
+            });
+
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Failed to auto-book');
+
+            // Update local state to reflect success
+            const newTrackingId = data.tracking_id;
+            setTrackingId(newTrackingId);
+            setCourierPartner('Delhivery');
+            setOrders(orders.map(o => o.id === viewingOrder.id ? { ...o, tracking_id: newTrackingId, courier_partner: 'Delhivery', is_delhivery_automated: true } : o));
+            setViewingOrder({ ...viewingOrder, tracking_id: newTrackingId, courier_partner: 'Delhivery', is_delhivery_automated: true });
+
+            alert('Successfully booked with Delhivery!');
+        } catch (error: any) {
+            alert(`Booking failed: ${error.message}`);
+        } finally {
+            setBookingDelhivery(false);
+        }
+    };
+
+    const handleFetchLabel = async () => {
+        if (!viewingOrder || !viewingOrder.tracking_id) return;
+        setFetchingLabel(true);
+        try {
+            const res = await fetch('/api/admin/orders/label', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ orderId: viewingOrder.id, waybill: viewingOrder.tracking_id })
+            });
+
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Failed to fetch label');
+
+            const labelUrl = data.label_url;
+            setOrders(orders.map(o => o.id === viewingOrder.id ? { ...o, label_url: labelUrl } : o));
+            setViewingOrder({ ...viewingOrder, label_url: labelUrl });
+
+            window.open(labelUrl, '_blank');
+        } catch (error: any) {
+            alert(`Fetching label failed: ${error.message}`);
+        } finally {
+            setFetchingLabel(false);
         }
     };
 
@@ -872,6 +961,71 @@ export default function AdminOrdersPage() {
                                 </tr>
                             </tfoot>
                         </table>
+
+                        <h3 style={{ marginTop: '1.5rem', marginBottom: '1rem' }}>Shipping & Tracking</h3>
+
+                        {/* Auto-Book Delhivery Flow - available for all orders without tracking */}
+                        {viewingOrder.shipping_address && !viewingOrder.is_delhivery_automated && !trackingId && (
+                            <div style={{ marginBottom: '1rem', padding: '1rem', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '0.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <div>
+                                    <h4 style={{ margin: 0, color: '#1e40af' }}>Delhivery Automated Booking</h4>
+                                    <p style={{ margin: '0.25rem 0 0', fontSize: '0.85rem', color: '#3b82f6' }}>Generate tracking and label instantly</p>
+                                </div>
+                                <Button size="sm" onClick={handleAutoBookDelhivery} disabled={bookingDelhivery} style={{ background: '#2563eb' }}>
+                                    {bookingDelhivery ? 'Booking...' : 'Auto-Book via Delhivery'}
+                                </Button>
+                            </div>
+                        )}
+
+                        {viewingOrder.is_delhivery_automated && (
+                            <div style={{ marginBottom: '1rem', padding: '1rem', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '0.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <div>
+                                    <h4 style={{ margin: 0, color: '#166534' }}>Delhivery Shipment Created</h4>
+                                    <p style={{ margin: '0.25rem 0 0', fontSize: '0.85rem', color: '#15803d' }}>Tracking ID: <strong>{trackingId}</strong></p>
+                                </div>
+                                <div>
+                                    {viewingOrder.label_url ? (
+                                        <Button size="sm" variant="outline" onClick={() => window.open(viewingOrder.label_url, '_blank')} style={{ borderColor: '#166534', color: '#166534' }}>
+                                            <Printer size={16} style={{ marginRight: '0.5rem' }} /> Print Label
+                                        </Button>
+                                    ) : (
+                                        <Button size="sm" variant="outline" onClick={handleFetchLabel} disabled={fetchingLabel} style={{ borderColor: '#166534', color: '#166534' }}>
+                                            {fetchingLabel ? 'Fetching...' : 'Generate Label'}
+                                        </Button>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', background: '#f9fafb', padding: '1rem', borderRadius: '0.5rem', marginBottom: '1.5rem' }}>
+                            <div>
+                                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', fontSize: '0.9rem' }}>Courier Partner</label>
+                                <select
+                                    value={courierPartner}
+                                    onChange={e => setCourierPartner(e.target.value)}
+                                    style={{ width: '100%', padding: '0.5rem', borderRadius: '0.25rem', border: '1px solid var(--border-light)' }}
+                                >
+                                    <option value="">Select Courier</option>
+                                    <option value="Delhivery">Delhivery</option>
+                                    <option value="ST Courier">ST Courier</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', fontSize: '0.9rem' }}>Tracking ID</label>
+                                <input
+                                    type="text"
+                                    value={trackingId}
+                                    onChange={e => setTrackingId(e.target.value)}
+                                    placeholder="Enter tracking ID"
+                                    style={{ width: '100%', padding: '0.5rem', borderRadius: '0.25rem', border: '1px solid var(--border-light)' }}
+                                />
+                            </div>
+                            <div style={{ gridColumn: '1 / -1', textAlign: 'right', marginTop: '0.5rem' }}>
+                                <Button size="sm" onClick={handleSaveTracking} disabled={savingTracking}>
+                                    {savingTracking ? 'Saving...' : 'Save Tracking Info'}
+                                </Button>
+                            </div>
+                        </div>
 
                         <div style={{ marginTop: '1.5rem', textAlign: 'right' }}>
                             <Button onClick={() => setViewingOrder(null)}>Close</Button>
