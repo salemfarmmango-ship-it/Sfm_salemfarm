@@ -18,7 +18,7 @@ export default function LayoutWrapper({
 
     // Register Service Worker for PWA & Push Notifications on load
     useEffect(() => {
-        if ('serviceWorker' in navigator && window.location.hostname !== 'localhost') {
+        if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('/firebase-messaging-sw.js')
                     .then((reg) => console.log('Service Worker registered:', reg.scope))
