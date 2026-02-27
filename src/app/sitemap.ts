@@ -24,20 +24,19 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const staticRoutes = [
         '',
         '/shop',
+        '/offers',
         '/about',
         '/contact',
         '/faq',
-        '/offers',
-        '/privacy',
-        '/terms',
-        '/returns',
         '/shipping',
-        '/blog', // Adding blog just in case user adds it later, or maybe not.
+        '/terms',
+        '/privacy',
+        '/returns',
     ].map((route) => ({
         url: `${baseUrl}${route}`,
         lastModified: new Date(),
-        changeFrequency: route === '' ? ('daily' as const) : ('monthly' as const),
-        priority: route === '' ? 1.0 : 0.7,
+        changeFrequency: route === '' ? ('daily' as const) : ('weekly' as const),
+        priority: route === '' ? 1.0 : route === '/shop' || route === '/offers' ? 0.9 : 0.7,
     }))
 
     return [...staticRoutes, ...productUrls]

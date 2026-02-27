@@ -16,58 +16,56 @@ const dmSerifDisplay = DM_Serif_Display({
 
 export const metadata: Metadata = {
     title: {
-        default: 'Salem Farm Mango | Premium Organic Salem Mangoes Online',
-        template: '%s | Salem Farm Mango - Best Mangoes in Tamil Nadu'
+        default: 'Salem Farm Mango | Authentic Salem Mangoes Online | Fresh From Farm',
+        template: '%s | Salem Farm Mango - Salem Fresh Mangoes'
     },
-    description: 'Buy authentic Salem Mangoes online. We deliver premium, naturally ripened, organic Imam Pasand, Malgova, and Alphonso mangoes directly from our farm in Salem, Tamil Nadu to your doorstep.',
+    description: 'Buy authentic Salem Mangoes online from SalemFarm Mango. We deliver premium, naturally ripened, organic Imam Pasand, Malgova, and Alphonso mangoes directly from our farm in Salem to your doorstep. Best Salem mango shopping experience.',
     keywords: [
-        'Salem Mango',
-        'Salem Farm Mango',
-        'Buy Mangoes Online',
-        'Organic Mangoes Online',
-        'Imam Pasand Mango',
-        'Malgova Mango',
-        'Alphonso Mango',
-        'Salem Bengalura',
-        'Best Mangoes in Tamil Nadu',
-        'Buy Salem Mangoes',
-        'Online Mango Delivery',
-        'Farm Fresh Mangoes',
+        'Salem mango',
+        'salemfarm mango',
+        'salem fresh mangoes',
+        'Buy Salem Mangoes Online',
+        'Organic Salem Mangoes',
+        'Salem Farm Fresh Mangoes',
+        'Best Mangoes in Salem',
+        'Imam Pasand Mango Salem',
         'Malgova Mango Online',
-        'Salem Mango Order'
+        'Alphonso Mango Tamil Nadu',
+        'Direct from Farm Mangoes'
     ],
     authors: [{ name: 'Salem Farm Mango' }],
     creator: 'Salem Farm Mango',
     metadataBase: new URL('https://salemfarmmango.com'),
+    manifest: '/manifest.json',
     alternates: {
         canonical: '/',
     },
     icons: {
-        icon: '/favicon.ico',
-        shortcut: '/favicon.ico',
-        apple: '/favicon.ico',
+        icon: '/logo.png',
+        shortcut: '/logo.png',
+        apple: '/logo.png',
     },
     openGraph: {
         type: 'website',
         locale: 'en_IN',
         url: 'https://salemfarmmango.com',
-        title: 'Salem Farm Mango | Authentic Salem Mangoes Delivered Home',
-        description: 'Order premium, naturally ripened Salem mangoes directly from our farm. Fresh, organic, and authentic taste delivered to your doorstep.',
+        title: 'Salem Farm Mango | Salem Fresh Mangoes | Order Online',
+        description: 'Order premium, naturally ripened Salem mangoes directly from salemfarm mango. Fresh, organic, and authentic taste delivered to your doorstep.',
         siteName: 'Salem Farm Mango',
         images: [
             {
-                url: '/web.png',
+                url: 'https://img.salemfarmmango.com/uploads/SFMLOGO.png',
                 width: 1200,
                 height: 630,
-                alt: 'Salem Farm Mango - Premium Organic Mangoes',
+                alt: 'Salem Farm Mango - Salem Fresh Mangoes',
             },
         ],
     },
     twitter: {
         card: 'summary_large_image',
-        title: 'Salem Farm Mango | Best Organic Mangoes from Salem',
+        title: 'Salem Farm Mango | Best Organic Salem Mangoes',
         description: 'Order premium, naturally ripened Salem mangoes directly from our farm. Fresh, organic, and authentic taste delivered to your doorstep.',
-        images: ['/web.png'],
+        images: ['https://img.salemfarmmango.com/uploads/SFMLOGO.png'],
     },
     robots: {
         index: true,

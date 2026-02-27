@@ -86,6 +86,21 @@ export default async function Home() {
 
     return (
         <main style={{ background: '#f8f9fa' }}>
+            {/* SEO Optimization: H1 Tag for Google Ranking */}
+            <h1 style={{
+                position: 'absolute',
+                width: '1px',
+                height: '1px',
+                padding: '0',
+                margin: '-1px',
+                overflow: 'hidden',
+                clip: 'rect(0, 0, 0, 0)',
+                whiteSpace: 'nowrap',
+                border: '0'
+            }}>
+                Salem Farm Mango - Buy Authentic Salem Fresh Mangoes Online Directly from Farm
+            </h1>
+
             {/* Hero Carousel */}
             <HeroCarousel />
 
