@@ -1,5 +1,21 @@
-// Firebase Messaging Service Worker
 // This runs in the background and handles push notifications even when the site is closed
+// Also acts as the PWA service worker for installability
+
+self.addEventListener('install', (event) => {
+    console.log('[Service Worker] Install Event');
+    self.skipWaiting();
+});
+
+self.addEventListener('activate', (event) => {
+    console.log('[Service Worker] Activate Event');
+    return self.clients.claim();
+});
+
+// PWA requirement: A fetch event handler is required for installability
+self.addEventListener('fetch', (event) => {
+    // Basic pass-through fetch handler
+    event.respondWith(fetch(event.request));
+});
 
 importScripts('https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging-compat.js');
