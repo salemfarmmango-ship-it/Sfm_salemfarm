@@ -18,19 +18,12 @@ export default function LayoutWrapper({
 
     // Register Service Worker for PWA & Push Notifications on load
     useEffect(() => {
-        if ('serviceWorker' in navigator) {
-            const register = () => {
+        if ('serviceWorker' in navigator && window.location.hostname !== 'localhost') {
+            window.addEventListener('load', () => {
                 navigator.serviceWorker.register('/firebase-messaging-sw.js')
                     .then((reg) => console.log('Service Worker registered:', reg.scope))
                     .catch((err) => console.error('Service Worker registration failed:', err));
-            };
-
-            if (document.readyState === 'complete') {
-                register();
-            } else {
-                window.addEventListener('load', register);
-                return () => window.removeEventListener('load', register);
-            }
+            });
         }
     }, []);
     const isAdminRoute = pathname?.startsWith('/admin') || pathname === '/admin-login';

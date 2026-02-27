@@ -78,20 +78,6 @@ export const metadata: Metadata = {
             'max-snippet': -1,
         },
     },
-    appleWebApp: {
-        capable: true,
-        statusBarStyle: 'default',
-        title: 'SF Mango',
-    },
-    formatDetection: {
-        telephone: false,
-    },
-}
-
-export const viewport = {
-    themeColor: '#166534',
-    width: 'device-width',
-    initialScale: 1,
 }
 
 export default function RootLayout({
