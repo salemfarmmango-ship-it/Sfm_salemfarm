@@ -1,20 +1,35 @@
-// This runs in the background and handles push notifications even when the site is closed
-// Also acts as the PWA service worker for installability
+importScripts('https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js');
+importScripts('https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging-compat.js');
+
+// PWA Service Worker for Salem Farm Mango
+// Handles Push Notifications and PWA Installability
+const CACHE_NAME = 'sfm-cache-v1';
 
 self.addEventListener('install', (event) => {
-    console.log('[Service Worker] Install Event');
     self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {
-    console.log('[Service Worker] Activate Event');
-    return self.clients.claim();
+    event.waitUntil(clients.claim());
 });
 
 // PWA requirement: A fetch event handler is required for installability
 self.addEventListener('fetch', (event) => {
-    // Basic pass-through fetch handler
-    event.respondWith(fetch(event.request));
+    // Only handle GET requests and same-origin to satisfy PWA checks
+    if (event.request.method !== 'GET') return;
+
+    event.respondWith(
+        fetch(event.request).catch((err) => {
+            console.error('[Service Worker] Fetch failed:', err);
+            // Return a simple response for offline if it's a page navigation
+            if (event.request.mode === 'navigate') {
+                return new Response('<h3>You are currently offline.</h3>', {
+                    headers: { 'Content-Type': 'text/html' }
+                });
+            }
+            return null;
+        })
+    );
 });
 
 importScripts('https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js');
