@@ -204,9 +204,20 @@ export default function SharePage() {
                                                 </span>
                                             </div>
 
-                                            <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '1.5rem', lineHeight: '1.5', height: '2.8em', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
-                                                {product.description || 'Authentic, naturally ripened mangoes from Salem Farm.'}
-                                            </p>
+                                            <div
+                                                style={{
+                                                    color: 'var(--text-secondary)',
+                                                    fontSize: '0.9rem',
+                                                    marginBottom: '1.5rem',
+                                                    lineHeight: '1.5',
+                                                    height: '2.8em',
+                                                    overflow: 'hidden',
+                                                    display: '-webkit-box',
+                                                    WebkitLineClamp: 2,
+                                                    WebkitBoxOrient: 'vertical'
+                                                }}
+                                                dangerouslySetInnerHTML={{ __html: product.description || 'Authentic, naturally ripened mangoes from Salem Farm.' }}
+                                            />
 
                                             <div style={{ borderTop: '1px solid #f0f0f0', paddingTop: '1.25rem', display: 'flex', gap: '0.75rem', justifyContent: 'space-between', marginTop: 'auto' }}>
                                                 {/* Social Share Buttons */}

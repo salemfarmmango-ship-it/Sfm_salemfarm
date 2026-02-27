@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
 
-const SLIDES = [
+const DEFAULT_SLIDES = [
     {
         id: 1,
         image: '/hero-model-eating-mango.png',
@@ -45,21 +45,89 @@ const SLIDES = [
     }
 ];
 
-export const HeroCarousel = () => {
+interface HeroSlide {
+    id: string | number;
+    image: string;
+    bgImage: string;
+    title: string;
+    subtitle: string;
+    price: string;
+    ctaLink: string;
+    bgColor: string;
+    badge: string;
+    badgeColor: string;
+    bgPositionDesktop: string;
+}
+
+interface HeroCarouselProps {
+    livePreviewSlides?: any[];
+    isCompact?: boolean;
+    forceMode?: 'mobile' | 'tablet' | 'desktop';
+}
+
+export const HeroCarousel = ({ livePreviewSlides, isCompact, forceMode }: HeroCarouselProps) => {
     const [current, setCurrent] = useState(0);
     const [isMobile, setIsMobile] = useState(false);
+    const [isTablet, setIsTablet] = useState(false);
+    const [dbSlides, setDbSlides] = useState<HeroSlide[]>([]);
+    const [isLoading, setIsLoading] = useState(!livePreviewSlides);
+
+    // Determine which slides to show
+    const activeSlides = livePreviewSlides || (dbSlides.length > 0 ? dbSlides : DEFAULT_SLIDES);
+
     const timeoutRef = useRef<NodeJS.Timeout | null>(null);
     const [touchStart, setTouchStart] = useState<number | null>(null);
     const [touchEnd, setTouchEnd] = useState<number | null>(null);
 
     useEffect(() => {
-        const checkMobile = () => {
-            setIsMobile(window.innerWidth < 1024);
+        // Fetch real slides if not in preview mode
+        if (!livePreviewSlides) {
+            fetch('/api/hero-slides')
+                .then(res => res.json())
+                .then(data => {
+                    if (data && data.length > 0) {
+                        // Map db fields to component props if necessary
+                        setDbSlides(data.map((s: any) => ({
+                            id: s.id,
+                            image: s.image,
+                            bgImage: s.bg_image,
+                            title: s.title,
+                            subtitle: s.subtitle,
+                            price: s.price,
+                            ctaLink: s.cta_link,
+                            bgColor: s.bg_color,
+                            badge: s.badge,
+                            badgeColor: s.badge_color,
+                            bgPositionDesktop: s.bg_position_desktop
+                        })));
+                    }
+                })
+                .catch(err => console.error('Failed to load hero slides', err))
+                .finally(() => setIsLoading(false));
+        }
+    }, [livePreviewSlides]);
+
+    // Handle when slide count changes during live preview shrinking
+    useEffect(() => {
+        if (current >= activeSlides.length) {
+            setCurrent(0);
+        }
+    }, [activeSlides.length, current]);
+
+    useEffect(() => {
+        const handleResize = () => {
+            if (forceMode) {
+                setIsMobile(forceMode === 'mobile');
+                setIsTablet(forceMode === 'tablet');
+            } else {
+                setIsMobile(window.innerWidth < 768);
+                setIsTablet(window.innerWidth >= 768 && window.innerWidth < 1024);
+            }
         };
-        checkMobile();
-        window.addEventListener('resize', checkMobile);
-        return () => window.removeEventListener('resize', checkMobile);
-    }, []);
+        handleResize();
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, [forceMode]);
 
     const minSwipeDistance = 50;
 
@@ -79,10 +147,10 @@ export const HeroCarousel = () => {
         const isRightSwipe = distance < -minSwipeDistance;
 
         if (isLeftSwipe) {
-            setCurrent((prev) => (prev === SLIDES.length - 1 ? 0 : prev + 1));
+            setCurrent((prev) => (prev === activeSlides.length - 1 ? 0 : prev + 1));
             resetTimeout();
         } else if (isRightSwipe) {
-            setCurrent((prev) => (prev === 0 ? SLIDES.length - 1 : prev - 1));
+            setCurrent((prev) => (prev === 0 ? activeSlides.length - 1 : prev - 1));
             resetTimeout();
         }
     };
@@ -94,13 +162,31 @@ export const HeroCarousel = () => {
     };
 
     useEffect(() => {
+        if (activeSlides.length === 0) return;
         resetTimeout();
         timeoutRef.current = setTimeout(
-            () => setCurrent((prev) => (prev === SLIDES.length - 1 ? 0 : prev + 1)),
+            () => setCurrent((prev) => (prev === activeSlides.length - 1 ? 0 : prev + 1)),
             5000
         );
         return () => resetTimeout();
-    }, [current]);
+    }, [current, activeSlides.length]);
+
+    if (isLoading && !livePreviewSlides) {
+        return (
+            <div style={{ padding: 'var(--space-4)', paddingBottom: 'var(--space-12)' }}>
+                <div className="container" style={{ padding: 0 }}>
+                    <div style={{
+                        borderRadius: '1.5rem',
+                        height: (isMobile || isCompact) ? '320px' : '420px',
+                        background: '#f3f4f6',
+                        animation: 'pulse 2s infinite'
+                    }} />
+                </div>
+            </div>
+        );
+    }
+
+    if (activeSlides.length === 0) return null;
 
     return (
         <div style={{ padding: 'var(--space-4)', paddingBottom: 'var(--space-12)' }}>
@@ -114,29 +200,31 @@ export const HeroCarousel = () => {
                         width: '100%',
                         overflow: 'hidden',
                         borderRadius: '1.5rem',
-                        minHeight: isMobile ? '300px' : '400px',
+                        minHeight: (isMobile || isCompact || isTablet) ? '320px' : '420px',
                         boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
                         touchAction: 'pan-y',
-                        background: '#f3f4f6'
+                        background: '#f3f4f6',
+                        display: 'flex',
+                        flexDirection: 'column'
                     }}>
 
                     <div style={{
                         display: 'flex',
                         transition: 'transform 0.5s ease',
                         transform: `translateX(-${current * 100}%)`,
-                        height: '100%',
+                        flex: 1,
                         width: '100%',
-                        userSelect: 'none'
+                        userSelect: 'none',
+                        alignItems: 'stretch'
                     }}>
-                        {SLIDES.map((slide) => (
+                        {activeSlides.map((slide) => (
                             <div key={slide.id} style={{
                                 flex: '0 0 100%',
                                 width: '100%',
                                 display: 'flex',
                                 position: 'relative',
-                                padding: isMobile ? '2rem 1rem' : '2.5rem 4rem',
+                                padding: isMobile ? '2.5rem 1.25rem' : isTablet ? '3rem 3.5rem' : (isCompact ? '1.5rem 1.5rem' : '4rem 5rem'),
                                 boxSizing: 'border-box',
-                                minHeight: isMobile ? '300px' : '400px',
                                 alignItems: 'center',
                                 overflow: 'hidden',
                                 backgroundColor: slide.bgColor,
@@ -154,77 +242,102 @@ export const HeroCarousel = () => {
                                     bottom: 0,
                                     background: isMobile
                                         ? 'linear-gradient(90deg, rgba(255,255,255,0.85) 0%, rgba(255,255,255,0.4) 50%, rgba(255,255,255,0) 100%)'
-                                        : 'linear-gradient(90deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.6) 35%, rgba(255,255,255,0) 60%)',
+                                        : isTablet
+                                            ? 'linear-gradient(90deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.6) 45%, rgba(255,255,255,0) 100%)'
+                                            : 'linear-gradient(90deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.6) 35%, rgba(255,255,255,0) 60%)',
                                     zIndex: 1
                                 }}></div>
 
                                 {/* Text Content */}
                                 <div style={{ flex: '1.2', paddingRight: '1rem', zIndex: 2 }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
-                                        <span style={{ fontSize: '0.9rem', color: '#1f2937', fontWeight: '600' }}>{slide.badge}</span>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                                        <span style={{ fontSize: '0.8rem', color: '#1f2937', fontWeight: '600' }}>{slide.badge}</span>
                                         <span style={{
                                             background: slide.badgeColor,
                                             color: 'white',
-                                            padding: '0.1rem 0.5rem',
+                                            padding: '0.1rem 0.4rem',
                                             borderRadius: '4px',
-                                            fontSize: '0.75rem',
+                                            fontSize: '0.7rem',
                                             fontWeight: 'bold'
                                         }}>15%</span>
                                     </div>
                                     {/* Title */}
                                     <h2 style={{
-                                        fontSize: isMobile ? '1.75rem' : '2.5rem',
+                                        fontSize: isMobile ? '1.5rem' : isTablet ? '2rem' : (isCompact ? '1.5rem' : '2.5rem'),
                                         lineHeight: '1.2',
-                                        marginBottom: '1rem',
+                                        marginBottom: '0.75rem',
                                         color: '#111827',
                                         fontWeight: '800',
-                                        textShadow: '0 1px 2px rgba(255,255,255,0.8)'
+                                        textShadow: '0 1px 2px rgba(255,255,255,0.8)',
+                                        whiteSpace: (isMobile || isTablet) ? 'pre-line' : 'normal',
+                                        maxWidth: (isMobile || isTablet) ? '100%' : `${slide.textWidth || 55}%`
                                     }}>
-                                        {isMobile ? (
-                                            <>
-                                                {slide.title.split(' ').slice(0, 2).join(' ')}
-                                                <br />
-                                                {slide.title.split(' ').slice(2).join(' ')}
-                                            </>
-                                        ) : slide.title}
+                                        {slide.title}
                                     </h2>
 
                                     <p style={{
-                                        fontSize: isMobile ? '0.9rem' : '1.1rem',
+                                        fontSize: isMobile ? '0.85rem' : isTablet ? '1rem' : (isCompact ? '0.9rem' : '1.1rem'),
                                         color: '#374151',
-                                        marginBottom: '1.5rem',
+                                        marginBottom: '1.25rem',
                                         lineHeight: '1.4',
-                                        fontWeight: isMobile ? '400' : '500',
-                                        maxWidth: isMobile ? '45%' : '100%',
-                                        whiteSpace: 'normal',
+                                        fontWeight: (isMobile || isCompact) ? '400' : '500',
+                                        maxWidth: isMobile ? '100%' : isTablet ? '80%' : `${slide.textWidth || 55}%`,
+                                        whiteSpace: (isMobile || isTablet) ? 'pre-line' : 'normal',
                                         overflow: 'visible'
                                     }}>
                                         {slide.subtitle}
                                     </p>
 
-                                    <div style={{ marginBottom: '1.5rem', fontSize: '1rem', color: '#111827', fontWeight: '600' }}>
-                                        Starts from <span style={{ color: '#dc2626', fontSize: isMobile ? '1.25rem' : '1.75rem', fontWeight: 'bold' }}>{slide.price.replace('Starts from ', '')}</span>
+                                    <div style={{ marginBottom: '1.25rem', fontSize: '1rem', color: '#111827', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                        <span style={{ fontSize: '0.85rem', color: '#6b7280', fontWeight: '400' }}>Starts from</span>
+                                        <span style={{ color: '#dc2626', fontSize: isMobile ? '1.25rem' : '1.5rem', fontWeight: '800' }}>{slide.price.replace('Starts from ', '')}</span>
                                     </div>
 
                                     <Link href={slide.ctaLink}>
-                                        <button style={{
-                                            background: '#365314',
-                                            color: 'white',
-                                            border: 'none',
-                                            borderRadius: '8px',
-                                            padding: '0.75rem 1.5rem',
-                                            fontWeight: '600',
-                                            cursor: 'pointer',
-                                            display: 'inline-flex',
-                                            alignItems: 'center',
-                                            gap: '0.5rem',
-                                            fontSize: '1rem',
-                                            boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
-                                        }}>
-                                            Shop Now <ArrowRight size={18} />
+                                        <button
+                                            suppressHydrationWarning
+                                            style={{
+                                                background: '#365314',
+                                                color: 'white',
+                                                border: 'none',
+                                                borderRadius: '8px',
+                                                padding: isMobile ? '0.6rem 1.25rem' : '0.75rem 1.5rem',
+                                                fontWeight: '700',
+                                                cursor: 'pointer',
+                                                display: 'inline-flex',
+                                                alignItems: 'center',
+                                                gap: '0.5rem',
+                                                fontSize: isMobile ? '0.9rem' : '1rem',
+                                                boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
+                                            }}>
+                                            Shop Now <ArrowRight size={isMobile ? 16 : 18} />
                                         </button>
                                     </Link>
                                 </div>
+
+                                {/* Foreground Image */}
+                                {slide.image && (
+                                    <div style={{
+                                        flex: '1',
+                                        display: isMobile ? 'none' : 'flex',
+                                        justifyContent: 'center',
+                                        alignItems: 'center',
+                                        zIndex: 2,
+                                        height: '100%',
+                                        position: 'relative'
+                                    }}>
+                                        <img
+                                            src={slide.image}
+                                            alt=""
+                                            style={{
+                                                maxHeight: '100%',
+                                                maxWidth: '100%',
+                                                objectFit: 'contain',
+                                                filter: 'drop-shadow(0 20px 30px rgba(0,0,0,0.15))'
+                                            }}
+                                        />
+                                    </div>
+                                )}
                             </div>
                         ))}
                     </div>
@@ -239,9 +352,10 @@ export const HeroCarousel = () => {
                         gap: '0.5rem',
                         zIndex: 10
                     }}>
-                        {SLIDES.map((_, idx) => (
+                        {activeSlides.map((_, idx) => (
                             <button
                                 key={idx}
+                                suppressHydrationWarning
                                 onClick={() => {
                                     setCurrent(idx);
                                     resetTimeout();

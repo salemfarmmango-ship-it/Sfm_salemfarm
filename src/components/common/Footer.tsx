@@ -75,7 +75,7 @@ export const Footer = () => {
             }}>
 
                 <div style={{ flex: 1 }}>
-                    <Image src="/logo.png" alt="Salem Farm Mango" width={150} height={75} style={{ marginBottom: 'var(--space-4)', objectFit: 'contain' }} />
+                    <Image src="https://img.salemfarmmango.com/uploads/SFMLOGO.png" alt="Salem Farm Mango" width={150} height={75} style={{ marginBottom: 'var(--space-4)', objectFit: 'contain' }} />
                     <p style={{ fontSize: '0.95rem', lineHeight: '1.6', color: 'var(--color-green-800)', maxWidth: '280px' }}>
                         Bringing the authentic taste of Salem's finest mangoes and organic products directly to your home.
                     </p>
@@ -88,6 +88,9 @@ export const Footer = () => {
                         <li><Link href="/about" style={{ borderBottom: '1px solid transparent', transition: 'border-color 0.2s', color: 'inherit', textDecoration: 'none' }}>About Us</Link></li>
                         <li><Link href="/offers" style={{ borderBottom: '1px solid transparent', transition: 'border-color 0.2s', color: 'inherit', textDecoration: 'none' }}>Offers</Link></li>
                         <li><Link href="/faq" style={{ borderBottom: '1px solid transparent', transition: 'border-color 0.2s', color: 'inherit', textDecoration: 'none' }}>FAQs</Link></li>
+                        <li><Link href="/terms" style={{ borderBottom: '1px solid transparent', transition: 'border-color 0.2s', color: 'inherit', textDecoration: 'none' }}>Terms & Conditions</Link></li>
+                        <li><Link href="/returns" style={{ borderBottom: '1px solid transparent', transition: 'border-color 0.2s', color: 'inherit', textDecoration: 'none' }}>Returns & Refund Policy</Link></li>
+                        <li><Link href="/privacy" style={{ borderBottom: '1px solid transparent', transition: 'border-color 0.2s', color: 'inherit', textDecoration: 'none' }}>Privacy Policy</Link></li>
                     </ul>
                 </div>
 

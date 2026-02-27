@@ -85,7 +85,7 @@ export default function AdminOffersPage() {
                         body: `${title} - Use code: ${couponCode.toUpperCase()}`,
                         url: `/offers`,
                         tag: `offer-${data.id}`,
-                        icon: imageUrl || '/logo.png'
+                        icon: imageUrl || 'https://img.salemfarmmango.com/uploads/SFMLOGO.png'
                     }
                 })
             }).catch(err => console.error('Failed to broadcast Push Notification:', err));

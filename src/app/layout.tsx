@@ -98,7 +98,7 @@ export default function RootLayout({
                             '@type': 'Organization',
                             name: 'Salem Farm Mango',
                             url: 'https://salemfarmmango.com',
-                            logo: 'https://salemfarmmango.com/logo.png',
+                            logo: 'https://img.salemfarmmango.com/uploads/SFMLOGO.png',
                             sameAs: [
                                 'https://instagram.com/salemfarmmango',
                                 'https://facebook.com/salemfarmmango'

@@ -87,7 +87,7 @@ export function useNotifications(): UseNotificationsReturn {
                     try {
                         new Notification(title || 'Salem Farm Mango', {
                             body: body || 'You have a new notification',
-                            icon: '/logo.png',
+                            icon: 'https://img.salemfarmmango.com/uploads/SFMLOGO.png',
                         });
                     } catch (e) {
                         console.error('Error showing notification', e);

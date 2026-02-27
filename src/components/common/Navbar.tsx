@@ -130,7 +130,7 @@ export const Navbar = () => {
             }}>
                 {/* Logo - Desktop (Hidden on mobile as it's part of top bar) */}
                 <Link href="/" className="hidden-mobile">
-                    <Image src="/logo.png" alt="Salem Farm Mango" width={140} height={70} style={{ objectFit: 'contain' }} />
+                    <Image src="https://img.salemfarmmango.com/uploads/SFMLOGO.png" alt="Salem Farm Mango" width={140} height={70} style={{ objectFit: 'contain' }} />
                 </Link>
 
                 {/* Desktop Links */}
@@ -544,7 +544,7 @@ export const Navbar = () => {
                             <Menu size={24} />
                         </button>
                         <Link href="/" style={{ display: 'flex', alignItems: 'center' }}>
-                            <Image src="/logo.png" alt="Salem Farm Mango" width={100} height={50} style={{ objectFit: 'contain' }} />
+                            <Image src="https://img.salemfarmmango.com/uploads/SFMLOGO.png" alt="Salem Farm Mango" width={100} height={50} style={{ objectFit: 'contain' }} />
                         </Link>
                     </div>
 

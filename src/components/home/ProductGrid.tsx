@@ -62,6 +62,7 @@ export const ProductGrid: React.FC<ProductGridProps> = ({ initialProducts }) => 
                 <div style={{ textAlign: 'center', marginTop: '4rem', marginBottom: '2rem' }}>
                     <button
                         onClick={loadMore}
+                        suppressHydrationWarning
                         disabled={loading}
                         className="btn"
                         style={{

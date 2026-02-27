@@ -32,7 +32,7 @@ export async function generateMetadata({ params }: { params: { slug: string } })
 
     const title = `${product.name} | Buy Authentic Salem Mangoes Online`;
     const description = product.description?.slice(0, 160) || `Buy premium ${product.name} directly from Salem Farm Mango. Organic, fresh, and naturally ripened.`;
-    const image = product.images?.[0] || '/logo.png';
+    const image = product.images?.[0] || 'https://img.salemfarmmango.com/uploads/SFMLOGO.png';
 
     return {
         title,
@@ -160,7 +160,7 @@ export default async function ProductPage({ params }: { params: { slug: string }
                         '@type': 'Product',
                         name: product.name,
                         description: product.description,
-                        image: product.images?.[0] || 'https://salemfarmmango.com/logo.png',
+                        image: product.images?.[0] || 'https://img.salemfarmmango.com/uploads/SFMLOGO.png',
                         brand: {
                             '@type': 'Brand',
                             name: 'Salem Farm Mango'

@@ -504,7 +504,7 @@ export default function AdminOrdersPage() {
                     <div key={order.id} className="label-card">
                         <div className="label-header">
                             <div>
-                                <img src="/logo.png" alt="Salem Farm Mango" style={{ height: '50px' }} />
+                                <img src="https://img.salemfarmmango.com/uploads/SFMLOGO.png" alt="Salem Farm Mango" style={{ height: '50px' }} />
                                 <div style={{ fontWeight: 'bold', fontSize: '18px', marginTop: '5px' }}>Salem Farm Mango</div>
                             </div>
                             <div style={{ textAlign: 'right' }}>

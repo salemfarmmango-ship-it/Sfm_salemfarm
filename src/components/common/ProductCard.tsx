@@ -25,6 +25,7 @@ export const ProductCard = ({ product }: { product: ProductCardProps }) => {
     const { addToCart } = useCart();
     const [isAdding, setIsAdding] = useState(false);
     const [isAdded, setIsAdded] = useState(false);
+    const [imageLoaded, setImageLoaded] = useState(false);
 
     const handleAddToCart = (e: React.MouseEvent) => {
         e.preventDefault(); // Prevent navigating if wrapped in Link
@@ -69,9 +70,30 @@ export const ProductCard = ({ product }: { product: ProductCardProps }) => {
             {/* Image Area */}
             <Link href={`/product/${product.id}`} style={{ display: 'block', position: 'relative' }}>
                 <div className="product-card-image-container">
-                    {/* Placeholder for real image */}
+                    {/* Shimmer loading placeholder */}
+                    {product.image && !imageLoaded && (
+                        <div className="product-card-image-shimmer" />
+                    )}
                     {product.image ? (
-                        <img src={product.image} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        <img
+                            src={product.image}
+                            alt={product.name}
+                            ref={(img) => {
+                                // If image is already cached/loaded, immediately set state
+                                if (img?.complete) {
+                                    setImageLoaded(true);
+                                }
+                            }}
+                            onLoad={() => setImageLoaded(true)}
+                            onError={() => setImageLoaded(true)} // Hide shimmer if image fails to load
+                            style={{
+                                width: '100%',
+                                height: '100%',
+                                objectFit: 'cover',
+                                opacity: imageLoaded ? 1 : 0,
+                                transition: 'opacity 0.4s ease-in-out',
+                            }}
+                        />
                     ) : (
                         <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ccc' }}>
                             No Image
@@ -152,6 +174,7 @@ export const ProductCard = ({ product }: { product: ProductCardProps }) => {
 
                     <button
                         onClick={handleAddToCart}
+                        suppressHydrationWarning
                         disabled={product.outOfStock || isAdding || isAdded}
                         className="product-card-btn"
                         style={{

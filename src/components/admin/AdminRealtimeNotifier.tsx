@@ -39,7 +39,7 @@ export const AdminRealtimeNotifier = () => {
         if ('Notification' in window && Notification.permission === 'granted') {
             new Notification('New Order Received! 🥭', {
                 body: `Order #${order.id} for ₹${order.total_amount} just came in.`,
-                icon: '/logo.png',
+                icon: 'https://img.salemfarmmango.com/uploads/SFMLOGO.png',
             });
         }
 

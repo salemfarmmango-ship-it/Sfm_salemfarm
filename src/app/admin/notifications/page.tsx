@@ -67,7 +67,7 @@ export default function AdminNotificationsPage() {
                         title,
                         body,
                         url,
-                        icon: '/logo.png',
+                        icon: 'https://img.salemfarmmango.com/uploads/SFMLOGO.png',
                     },
                 }),
             });

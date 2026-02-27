@@ -368,6 +368,36 @@ button {
     overflow: hidden;
 }
 
+/* Shimmer loading animation for product card images */
+@keyframes shimmer {
+    0% {
+        transform: translateX(-100%);
+    }
+
+    100% {
+        transform: translateX(100%);
+    }
+}
+
+.product-card-image-shimmer {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    background: linear-gradient(135deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    overflow: hidden;
+}
+
+.product-card-image-shimmer::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg,
+            transparent 0%,
+            rgba(255, 255, 255, 0.6) 50%,
+            transparent 100%);
+    animation: shimmer 1.5s ease-in-out infinite;
+}
+
 .product-card-content {
     padding: 0.5rem;
     /* Tight padding for mobile */

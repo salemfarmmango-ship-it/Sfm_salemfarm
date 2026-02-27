@@ -89,9 +89,6 @@ export default async function Home() {
             {/* Hero Carousel */}
             <HeroCarousel />
 
-            {/* 3-Panel Promo Image Grid */}
-            <PromoImageGrid />
-
             {/* Featured Products Carousel */}
             <ProductCarousel
                 title="Customer Favorites"
@@ -140,6 +137,11 @@ export default async function Home() {
                     <ProductGrid initialProducts={recentProducts} />
                 </div>
             </section>
+
+            {/* 3-Panel Promo Image Grid - Moved to bottom above footer */}
+            <div style={{ margin: '2rem 0' }}>
+                <PromoImageGrid />
+            </div>
         </main>
     );
 }

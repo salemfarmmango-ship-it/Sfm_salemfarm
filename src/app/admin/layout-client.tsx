@@ -75,6 +75,7 @@ export default function AdminLayout({
         { href: '/admin/shipping', label: 'Shipping', icon: <Truck size={20} /> },
         { href: '/admin/enquiries', label: 'Enquiries', icon: <MessageSquare size={20} /> },
         { href: '/admin/subscribers', label: 'Subscribers', icon: <Users size={20} /> },
+        { href: '/admin/hero', label: 'Hero Section', icon: <Home size={20} /> },
         { href: '/admin/settings', label: 'Settings', icon: <Settings size={20} /> },
     ];
 

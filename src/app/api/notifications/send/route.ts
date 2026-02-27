@@ -108,7 +108,7 @@ export async function POST(request: NextRequest) {
             },
             webpush: {
                 notification: {
-                    icon: notification.icon || '/logo.png',
+                    icon: notification.icon || 'https://img.salemfarmmango.com/uploads/SFMLOGO.png',
                     badge: '/favicon.ico',
                     click_action: notification.url || '/',
                 },

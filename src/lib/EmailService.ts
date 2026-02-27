@@ -47,7 +47,7 @@ export class EmailService {
             <body>
                 <div class="container">
                     <div class="header">
-                        <img src="https://salemfarmmango.com/logo.png" alt="Salem Farm Mango" style="height: 60px;" />
+                        <img src="https://img.salemfarmmango.com/uploads/SFMLOGO.png" alt="Salem Farm Mango" style="height: 60px;" />
                         <h1 style="color: #1b421b; margin: 15px 0 0 0; font-size: 28px;">Order Confirmed!</h1>
                     </div>
                     <div class="content">
