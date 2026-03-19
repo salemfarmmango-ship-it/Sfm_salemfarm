@@ -7,7 +7,7 @@ export async function GET(
     const table = params.table.endsWith('.php') ? params.table : `${params.table}.php`;
     const { searchParams } = new URL(request.url);
     const queryString = searchParams.toString();
-    const targetUrl = `http://salemfarmmango.com/api/${table}${queryString ? `?${queryString}` : ''}`;
+    const targetUrl = `${process.env.NEXT_PUBLIC_API_URL}/${table}${queryString ? `?${queryString}` : ''}`;
 
     try {
         const response = await fetch(targetUrl, {
@@ -32,7 +32,7 @@ export async function POST(
 ) {
     const table = params.table.endsWith('.php') ? params.table : `${params.table}.php`;
     const body = await request.json();
-    const targetUrl = `http://salemfarmmango.com/api/${table}`;
+    const targetUrl = `${process.env.NEXT_PUBLIC_API_URL}/${table}`;
 
     try {
         const response = await fetch(targetUrl, {
@@ -60,7 +60,7 @@ export async function PUT(
     const body = await request.json();
     const { searchParams } = new URL(request.url);
     const queryString = searchParams.toString();
-    const targetUrl = `http://salemfarmmango.com/api/${table}${queryString ? `?${queryString}` : ''}`;
+    const targetUrl = `${process.env.NEXT_PUBLIC_API_URL}/${table}${queryString ? `?${queryString}` : ''}`;
 
     try {
         const response = await fetch(targetUrl, {
@@ -87,7 +87,7 @@ export async function DELETE(
     const table = params.table.endsWith('.php') ? params.table : `${params.table}.php`;
     const { searchParams } = new URL(request.url);
     const queryString = searchParams.toString();
-    const targetUrl = `http://salemfarmmango.com/api/${table}${queryString ? `?${queryString}` : ''}`;
+    const targetUrl = `${process.env.NEXT_PUBLIC_API_URL}/${table}${queryString ? `?${queryString}` : ''}`;
 
     try {
         const response = await fetch(targetUrl, {

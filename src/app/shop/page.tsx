@@ -11,7 +11,7 @@ export default async function ShopPage({ searchParams }: { searchParams: { [key:
     const searchQuery = searchParams?.search as string | undefined;
     let dbProducts: any[] = [];
     try {
-        const url = new URL('http://salemfarmmango.com/api/products.php');
+        const url = new URL('${process.env.NEXT_PUBLIC_API_URL}/products.php');
         if (searchQuery) url.searchParams.append('search', searchQuery);
         
         const res = await fetch(url.toString(), { cache: 'no-store' });
@@ -24,7 +24,7 @@ export default async function ShopPage({ searchParams }: { searchParams: { [key:
     // 2. Fetch categories from MySQL Backend
     let mysqlCategories: any[] = [];
     try {
-        const res = await fetch('http://salemfarmmango.com/api/categories.php', { cache: 'no-store' });
+        const res = await fetch('${process.env.NEXT_PUBLIC_API_URL}/categories.php', { cache: 'no-store' });
         if (res.ok) mysqlCategories = await res.json();
     } catch (e) { console.error('Error fetching categories from PHP', e); }
 

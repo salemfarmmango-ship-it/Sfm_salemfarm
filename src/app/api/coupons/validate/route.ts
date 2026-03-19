@@ -12,7 +12,7 @@ export async function POST(request: Request) {
         const token = cookies().get('sfm_token')?.value;
 
         // Proxy to PHP backend using the public validation parameter 'code'
-        const res = await fetch(`http://salemfarmmango.com/api/coupons.php?code=${encodeURIComponent(code)}`, {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/coupons.php?code=${encodeURIComponent(code)}`, {
             headers: {
                 'Authorization': `Bearer ${token}`
             },

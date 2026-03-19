@@ -1,5 +1,5 @@
 <?php
-$url = 'http://salemfarmmango.com/api/enquiries.php?type=bulk';
+$url = '${process.env.NEXT_PUBLIC_API_URL}/enquiries.php?type=bulk';
 $data = ['name' => 'Tester', 'email' => 'test@test.com', 'phone' => '1234', 'quantity' => '50kg', 'message' => 'hello'];
 
 $ch = curl_init($url);

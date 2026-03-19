@@ -13,7 +13,7 @@ export async function GET(
             return unauthorizedResponse();
         }
 
-        const res = await fetch(`http://salemfarmmango.com/api/orders.php?id=${params.id}`, {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/orders.php?id=${params.id}`, {
             cache: 'no-store',
             headers: {
                 'Authorization': `Bearer ${token}`,

@@ -5,7 +5,7 @@ export async function POST(request: NextRequest) {
         const body = await request.json();
 
         // Forward to PHP backend
-        const response = await fetch('http://salemfarmmango.com/auth/login-otp.php', {
+        const response = await fetch('${process.env.NEXT_PUBLIC_API_URL}/auth/login-otp.php', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(body)

@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Forward to PHP backend
-        const response = await fetch('http://salemfarmmango.com/api/notifications.php', {
+        const response = await fetch('${process.env.NEXT_PUBLIC_API_URL}/notifications.php', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ token, deviceInfo, userId })
@@ -54,7 +54,7 @@ export async function GET(request: NextRequest) {
             );
         }
 
-        const response = await fetch(`http://salemfarmmango.com/api/notifications.php?token=${token}`);
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/notifications.php?token=${token}`);
         const data = await response.json();
 
         if (!response.ok) {
@@ -83,7 +83,7 @@ export async function DELETE(request: NextRequest) {
             );
         }
 
-        const response = await fetch('http://salemfarmmango.com/api/notifications.php', {
+        const response = await fetch('${process.env.NEXT_PUBLIC_API_URL}/notifications.php', {
             method: 'DELETE',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ token })

@@ -6,7 +6,7 @@ export async function GET(request: NextRequest) {
     try {
         const { searchParams } = new URL(request.url);
         
-        const res = await fetch(`http://salemfarmmango.com/api/products.php?${searchParams.toString()}`, {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/products.php?${searchParams.toString()}`, {
             cache: 'no-store'
         });
 

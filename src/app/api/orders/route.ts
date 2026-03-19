@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
         const page = searchParams.get('page');
         const limit = searchParams.get('limit');
 
-        let url = 'http://salemfarmmango.com/api/orders.php';
+        let url = '${process.env.NEXT_PUBLIC_API_URL}/orders.php';
         const params = new URLSearchParams();
         if (id) params.append('id', id);
         if (status) params.append('status', status);
@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
 
         const body = await request.json();
 
-        const phpResponse = await fetch('http://salemfarmmango.com/api/orders.php', {
+        const phpResponse = await fetch('${process.env.NEXT_PUBLIC_API_URL}/orders.php', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

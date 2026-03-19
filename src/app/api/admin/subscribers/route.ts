@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
             return unauthorizedResponse();
         }
 
-        const res = await fetch('http://salemfarmmango.com/api/subscribers.php', {
+        const res = await fetch('${process.env.NEXT_PUBLIC_API_URL}/subscribers.php', {
             cache: 'no-store',
             headers: {
                 'Authorization': `Bearer ${token}`,
@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
     try {
         // Publicly accessible for subscribing
         const body = await request.json();
-        const res = await fetch('http://salemfarmmango.com/api/subscribers.php', {
+        const res = await fetch('${process.env.NEXT_PUBLIC_API_URL}/subscribers.php', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(body)
@@ -52,7 +52,7 @@ export async function DELETE(request: NextRequest) {
         const { searchParams } = new URL(request.url);
         const id = searchParams.get('id');
 
-        const res = await fetch(`http://salemfarmmango.com/api/subscribers.php?id=${id}`, {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/subscribers.php?id=${id}`, {
             method: 'DELETE',
             headers: {
                 'Authorization': `Bearer ${token}`,

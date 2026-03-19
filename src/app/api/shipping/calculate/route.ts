@@ -51,7 +51,7 @@ export async function POST(request: Request) {
             // Fetch from local PHP backend using canonical names
             const queryState = isTN ? 'Tamil Nadu' : 'Puducherry';
             try {
-                const res = await fetch(`http://salemfarmmango.com/api/shipping_rates.php?state_name=${encodeURIComponent(queryState)}&is_active=1`, { cache: 'no-store' });
+                const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/shipping_rates.php?state_name=${encodeURIComponent(queryState)}&is_active=1`, { cache: 'no-store' });
                 if (res.ok) {
                     const dataArr = await res.json();
                     const data = dataArr[0]; // Get first match

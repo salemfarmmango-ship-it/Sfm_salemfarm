@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
             return unauthorizedResponse();
         }
 
-        const res = await fetch('http://salemfarmmango.com/api/stats.php', {
+        const res = await fetch('${process.env.NEXT_PUBLIC_API_URL}/stats.php', {
             cache: 'no-store',
             headers: {
                 'Authorization': `Bearer ${token}`,

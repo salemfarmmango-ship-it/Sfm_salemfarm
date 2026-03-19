@@ -3,7 +3,7 @@ import { verifyAdmin, unauthorizedResponse } from '@/lib/adminAuth';
 
 export const dynamic = 'force-dynamic';
 
-const BACKEND_URL = 'http://salemfarmmango.com/api/offers.php';
+const BACKEND_URL = '${process.env.NEXT_PUBLIC_API_URL}/offers.php';
 
 export async function GET(request: NextRequest) {
     try {

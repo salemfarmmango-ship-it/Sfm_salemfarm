@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
             return unauthorizedResponse();
         }
 
-        const res = await fetch('http://salemfarmmango.com/api/settings.php', {
+        const res = await fetch('${process.env.NEXT_PUBLIC_API_URL}/settings.php', {
             cache: 'no-store',
             headers: {
                 'Authorization': `Bearer ${token}`,
@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
         }
 
         const body = await request.json();
-        const res = await fetch('http://salemfarmmango.com/api/settings.php', {
+        const res = await fetch('${process.env.NEXT_PUBLIC_API_URL}/settings.php', {
             method: 'POST',
             headers: { 
                 'Content-Type': 'application/json',

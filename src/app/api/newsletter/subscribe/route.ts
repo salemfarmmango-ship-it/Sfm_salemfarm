@@ -10,7 +10,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Forward to PHP backend
-        const response = await fetch('http://salemfarmmango.com/api/subscribers.php', {
+        const response = await fetch('${process.env.NEXT_PUBLIC_API_URL}/subscribers.php', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email })

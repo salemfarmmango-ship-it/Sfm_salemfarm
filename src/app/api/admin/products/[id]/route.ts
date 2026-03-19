@@ -13,7 +13,7 @@ export async function GET(
             return unauthorizedResponse();
         }
 
-        const res = await fetch(`http://salemfarmmango.com/api/products.php?id=${params.id}`, {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/products.php?id=${params.id}`, {
             cache: 'no-store',
             headers: {
                 'Authorization': `Bearer ${token}`,
@@ -46,7 +46,7 @@ export async function PATCH(
         const body = await request.json();
 
         // Proxy to PHP backend
-        const res = await fetch(`http://salemfarmmango.com/api/products.php?id=${params.id}`, {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/products.php?id=${params.id}`, {
             method: 'PUT', // PHP endpoint uses PUT for updates
             headers: { 
                 'Content-Type': 'application/json',
@@ -83,7 +83,7 @@ export async function DELETE(
         }
 
         // Proxy to PHP backend
-        const res = await fetch(`http://salemfarmmango.com/api/products.php?id=${params.id}`, {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/products.php?id=${params.id}`, {
             method: 'DELETE',
             headers: {
                 'Authorization': `Bearer ${token}`,

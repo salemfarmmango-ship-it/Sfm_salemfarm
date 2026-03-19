@@ -9,7 +9,7 @@ export async function GET(request: Request) {
     }
 
     try {
-        const res = await fetch(`http://salemfarmmango.com/api/coupons.php?code=${code}`, {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/coupons.php?code=${code}`, {
             cache: 'no-store'
         });
         const data = await res.json();

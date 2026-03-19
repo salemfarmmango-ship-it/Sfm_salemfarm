@@ -1,5 +1,5 @@
 <?php
-$url = "http://salemfarmmango.com/api/blogs.php?status=published";
+$url = "${process.env.NEXT_PUBLIC_API_URL}/blogs.php?status=published";
 $ch = curl_init($url);
 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 $response = curl_exec($ch);

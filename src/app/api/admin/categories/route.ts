@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
             return unauthorizedResponse();
         }
 
-        const res = await fetch('http://salemfarmmango.com/api/categories.php', {
+        const res = await fetch('${process.env.NEXT_PUBLIC_API_URL}/categories.php', {
             cache: 'no-store',
             headers: {
                 'Authorization': `Bearer ${token}`,
@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
         const body = await request.json();
 
         // Proxy to PHP backend
-        const res = await fetch('http://salemfarmmango.com/api/categories.php', {
+        const res = await fetch('${process.env.NEXT_PUBLIC_API_URL}/categories.php', {
             method: 'POST',
             headers: { 
                 'Content-Type': 'application/json',

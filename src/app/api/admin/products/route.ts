@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
         }
 
         const { searchParams } = new URL(request.url);
-        const res = await fetch(`http://salemfarmmango.com/api/products.php?${searchParams.toString()}`, {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/products.php?${searchParams.toString()}`, {
             cache: 'no-store',
             headers: {
                 'Authorization': `Bearer ${token}`,
@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
         const body = await request.json();
 
         // Proxy to PHP backend
-        const res = await fetch('http://salemfarmmango.com/api/products.php', {
+        const res = await fetch('${process.env.NEXT_PUBLIC_API_URL}/products.php', {
             method: 'POST',
             headers: { 
                 'Content-Type': 'application/json',
@@ -73,7 +73,7 @@ export async function DELETE(request: NextRequest) {
         const body = await request.json();
 
         // Proxy to PHP backend
-        const res = await fetch('http://salemfarmmango.com/api/products.php', {
+        const res = await fetch('${process.env.NEXT_PUBLIC_API_URL}/products.php', {
             method: 'DELETE',
             headers: { 
                 'Content-Type': 'application/json',
@@ -109,7 +109,7 @@ export async function PATCH(request: NextRequest) {
         const body = await request.json();
 
         // Proxy to PHP backend (uses PUT/PATCH logic internally)
-        const res = await fetch('http://salemfarmmango.com/api/products.php', {
+        const res = await fetch('${process.env.NEXT_PUBLIC_API_URL}/products.php', {
             method: 'PATCH',
             headers: { 
                 'Content-Type': 'application/json',

@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Forward to PHP backend
-        const response = await fetch('http://salemfarmmango.com/auth/google.php', {
+        const response = await fetch('${process.env.NEXT_PUBLIC_API_URL}/auth/google.php', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ credential })

@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
         }
 
         // Verify admin exists in MySQL sfm.users table via PHP backend
-        const res = await fetch(`http://salemfarmmango.com/api/admin-verify.php?id=${encodeURIComponent(adminId)}`, {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/admin-verify.php?id=${encodeURIComponent(adminId)}`, {
             cache: 'no-store'
         });
 

@@ -13,7 +13,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
         const id = params.id;
         const body = await request.json();
 
-        const res = await fetch(`http://salemfarmmango.com/api/blogs.php?id=${id}`, {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/blogs.php?id=${id}`, {
             method: 'PATCH',
             headers: { 
                 'Content-Type': 'application/json',
@@ -48,7 +48,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
 
         const id = params.id;
 
-        const res = await fetch(`http://salemfarmmango.com/api/blogs.php?id=${id}`, {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/blogs.php?id=${id}`, {
             method: 'DELETE',
             headers: { 
                 'Authorization': `Bearer ${token}`,
@@ -81,7 +81,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
 
         const id = params.id;
 
-        const res = await fetch(`http://salemfarmmango.com/api/blogs.php?id=${id}`, {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/blogs.php?id=${id}`, {
             cache: 'no-store',
             headers: {
                 'Authorization': `Bearer ${token}`,

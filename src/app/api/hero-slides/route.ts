@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 // GET all slides matching order
 export async function GET() {
     try {
-        const response = await fetch('http://salemfarmmango.com/api/hero_slides.php', {
+        const response = await fetch('${process.env.NEXT_PUBLIC_API_URL}/hero_slides.php', {
             cache: 'no-store'
         });
         const slides = await response.json();
@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
         const token = req.cookies.get('sfm_token')?.value;
         const body = await req.json();
         
-        const response = await fetch('http://salemfarmmango.com/api/hero_slides.php', {
+        const response = await fetch('${process.env.NEXT_PUBLIC_API_URL}/hero_slides.php', {
             method: 'POST',
             headers: { 
                 'Content-Type': 'application/json',
@@ -46,7 +46,7 @@ export async function PUT(req: NextRequest) {
         const token = req.cookies.get('sfm_token')?.value;
         const body = await req.json();
 
-        const response = await fetch('http://salemfarmmango.com/api/hero_slides.php', {
+        const response = await fetch('${process.env.NEXT_PUBLIC_API_URL}/hero_slides.php', {
             method: 'PUT',
             headers: { 
                 'Content-Type': 'application/json' ,
@@ -75,7 +75,7 @@ export async function DELETE(req: NextRequest) {
             return NextResponse.json({ error: 'Slide ID is required' }, { status: 400 });
         }
 
-        const response = await fetch(`http://salemfarmmango.com/api/hero_slides.php?id=${id}`, {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/hero_slides.php?id=${id}`, {
             method: 'DELETE',
             headers: {
                 'Authorization': `Bearer ${token}`

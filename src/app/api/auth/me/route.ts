@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
         }
 
         // Verify token with PHP backend
-        const response = await fetch('http://salemfarmmango.com/auth/me.php', {
+        const response = await fetch('${process.env.NEXT_PUBLIC_API_URL}/auth/me.php', {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json',

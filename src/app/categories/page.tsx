@@ -9,7 +9,7 @@ export default async function CategoriesPage() {
     let displayCategories = [];
 
     try {
-        const res = await fetch('http://salemfarmmango.com/api/categories.php', {
+        const res = await fetch('${process.env.NEXT_PUBLIC_API_URL}/categories.php', {
             next: { revalidate: 0 } // no-cache
         });
         

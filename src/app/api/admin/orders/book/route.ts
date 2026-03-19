@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
         }
 
         // 1. Fetch full order details using PHP proxy
-        const orderRes = await fetch(`http://salemfarmmango.com/api/orders.php?id=${orderId}`, {
+        const orderRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/orders.php?id=${orderId}`, {
             headers: {
                 'Authorization': `Bearer ${token}`,
                 'X-SFM-Token': token || ''
@@ -193,7 +193,7 @@ export async function POST(request: NextRequest) {
         console.log('[Delhivery] SUCCESS! Waybill:', waybill);
 
         // 8. Save to MySQL via PHP backend
-        const updateRes = await fetch(`http://salemfarmmango.com/api/orders.php`, {
+        const updateRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/orders.php`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
