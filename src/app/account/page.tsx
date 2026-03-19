@@ -2,8 +2,8 @@
 import React, { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Package, MapPin, User as UserIcon, LogOut, ChevronRight, Clock, CheckCircle2, Truck, XCircle, Info, Plus } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
 import { formatDate } from '@/lib/dateUtils';
+import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/Button';
 import { MangoLoader } from '@/components/common/MangoLoader';
 
@@ -15,7 +15,7 @@ function AccountContent() {
     const activeTab = (searchParams.get('tab') as Tab) || 'overview';
 
     const [loading, setLoading] = useState(true);
-    const [user, setUser] = useState<any>(null);
+    const { user, loading: authLoading, signOut } = useAuth();
     const [profile, setProfile] = useState<any>(null);
     const [orders, setOrders] = useState<any[]>([]);
     const [addresses, setAddresses] = useState<any[]>([]);
@@ -39,53 +39,45 @@ function AccountContent() {
     const [viewOrder, setViewOrder] = useState<any | null>(null);
 
     useEffect(() => {
-        const checkUser = async () => {
-            const { data: { session } } = await supabase.auth.getSession();
-            if (!session) {
+        if (!authLoading) {
+            if (!user) {
                 router.push('/auth');
-                return;
+            } else {
+                fetchData();
             }
-            setUser(session.user);
-            fetchData(session.user.id);
-        };
+        }
+    }, [user, authLoading, router]);
 
-        checkUser();
-    }, [router]);
-
-    const fetchData = async (userId: string) => {
+    const fetchData = async () => {
         setLoading(true);
         try {
             // Fetch Profile
-            const { data: profileData } = await supabase
-                .from('profiles')
-                .select('*')
-                .eq('id', userId)
-                .single();
-            setProfile(profileData);
+            const profileRes = await fetch('/api/profile');
+            if (profileRes.ok) {
+                const profileData = await profileRes.json();
+                setProfile(profileData);
+            }
 
             // Fetch Orders
-            const { data: ordersData } = await supabase
-                .from('orders')
-                .select('*')
-                .eq('user_id', userId)
-                .order('created_at', { ascending: false });
-            setOrders(ordersData || []);
+            const ordersRes = await fetch('/api/orders');
+            if (ordersRes.ok) {
+                const ordersData = await ordersRes.json();
+                setOrders(ordersData.data || []);
+            }
 
             // Fetch Addresses
-            const { data: addressesData } = await supabase
-                .from('addresses')
-                .select('*')
-                .eq('user_id', userId)
-                .order('is_default', { ascending: false });
-            setAddresses(addressesData || []);
+            const addressesRes = await fetch('/api/addresses');
+            if (addressesRes.ok) {
+                const addressesData = await addressesRes.json();
+                setAddresses(addressesData || []);
+            }
 
             // Fetch Shipping Rates
-            const { data: ratesData } = await supabase
-                .from('shipping_rates')
-                .select('*')
-                .eq('is_active', true)
-                .order('state_name', { ascending: true });
-            setShippingRates(ratesData || []);
+            const ratesRes = await fetch('/api/shipping/rates');
+            if (ratesRes.ok) {
+                const ratesData = await ratesRes.json();
+                setShippingRates(ratesData || []);
+            }
 
         } catch (error) {
             console.error('Error fetching data:', error);
@@ -100,13 +92,15 @@ function AccountContent() {
 
         setSubmitting(true);
         try {
-            const { error } = await supabase
-                .from('profiles')
-                .upsert({ id: user.id, full_name: profileName }, { onConflict: 'id' });
+            const response = await fetch('/api/profile', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ full_name: profileName })
+            });
 
-            if (error) throw error;
+            if (!response.ok) throw new Error('Failed to update profile');
 
-            await fetchData(user.id);
+            await fetchData();
             setEditingProfile(false);
             alert('Profile updated successfully!');
         } catch (error: any) {
@@ -118,7 +112,7 @@ function AccountContent() {
     };
 
     const handleSignOut = async () => {
-        await supabase.auth.signOut();
+        await signOut();
         router.push('/auth');
     };
 
@@ -134,30 +128,26 @@ function AccountContent() {
 
         setSubmitting(true);
         try {
-            // Ensure profile exists
-            if (!profile) {
-                await supabase.from('profiles').upsert({ id: user.id, full_name: newAddress.full_name || user.email }, { onConflict: 'id' });
-            }
+            const addressData = { ...newAddress };
 
-            const addressData = { ...newAddress, user_id: user.id };
-
-            let error;
+            let response;
             if (editingId) {
-                const { error: updateError } = await supabase
-                    .from('addresses')
-                    .update(addressData)
-                    .eq('id', editingId);
-                error = updateError;
+                response = await fetch(`/api/addresses?id=${editingId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(addressData)
+                });
             } else {
-                const { error: insertError } = await supabase
-                    .from('addresses')
-                    .insert([addressData]);
-                error = insertError;
+                response = await fetch('/api/addresses', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(addressData)
+                });
             }
 
-            if (error) throw error;
+            if (!response.ok) throw new Error('Failed to save address');
 
-            fetchData(user.id);
+            fetchData();
             resetForm();
             alert(editingId ? 'Address updated successfully!' : 'Address added successfully!');
         } catch (error: any) {
@@ -169,12 +159,20 @@ function AccountContent() {
     };
 
     const handleDeleteAddress = async (id: number) => {
+        if (!user) return;
         if (!confirm('Are you sure you want to delete this address?')) return;
-        const { error } = await supabase.from('addresses').delete().eq('id', id);
-        if (error) {
+        
+        try {
+            const response = await fetch(`/api/addresses?id=${id}`, {
+                method: 'DELETE'
+            });
+
+            if (!response.ok) throw new Error('Failed to delete address');
+            
+            fetchData();
+        } catch (error: any) {
+            console.error('Error deleting address:', error);
             alert('Failed to delete address');
-        } else {
-            fetchData(user.id);
         }
     };
 
@@ -187,7 +185,7 @@ function AccountContent() {
             state: address.state,
             postal_code: address.postal_code,
             phone: address.phone,
-            is_default: address.is_default
+            is_default: !!address.is_default
         });
         setEditingId(address.id);
         setShowAddressForm(true);
@@ -237,75 +235,134 @@ function AccountContent() {
         const invoiceWindow = window.open('', '_blank');
         if (!invoiceWindow) return;
 
+        const discountHtml = order.discount_amount && parseFloat(order.discount_amount) > 0 
+            ? `
+                <tr>
+                    <td style="text-align: right; font-weight: 500; color: #64748b;">Discount ${order.coupon_code ? '('+order.coupon_code+')' : ''}:</td>
+                    <td style="text-align: right; color: #16a34a; font-weight: 600;">-₹${order.discount_amount}</td>
+                </tr>
+            ` : '';
+
+        // Safely calculate subtotal by attempting to add discount back to total.
+        const subtotal = order.total_amount && order.discount_amount 
+            ? (parseFloat(order.total_amount) + parseFloat(order.discount_amount)).toFixed(2) 
+            : order.total_amount;
+
         const html = `
             <!DOCTYPE html>
-            <html>
+            <html lang="en">
             <head>
+                <meta charset="UTF-8">
                 <title>Invoice #${order.id}</title>
                 <style>
-                    body { font-family: sans-serif; padding: 40px; }
-                    .header { display: flex; justify-content: space-between; margin-bottom: 40px; }
-                    .logo { font-size: 24px; font-weight: bold; color: #166534; }
-                    .invoice-title { font-size: 32px; color: #333; }
+                    body { font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc; margin: 0; padding: 40px; color: #334155; line-height: 1.6; }
+                    .invoice-box { max-width: 800px; margin: auto; padding: 40px; border: 1px solid #e2e8f0; border-radius: 12px; background: #ffffff; box-shadow: 0 10px 25px rgba(0,0,0,0.05); }
+                    .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 40px; padding-bottom: 20px; border-bottom: 2px solid #f1f5f9; }
+                    .brand-info h1 { margin: 0; color: #166534; font-size: 28px; font-weight: 800; letter-spacing: -0.5px; display: flex; align-items: center; gap: 10px; }
+                    .brand-info p { margin: 5px 0 0; font-size: 14px; color: #64748b; }
+                    .invoice-meta { text-align: right; }
+                    .invoice-meta h2 { margin: 0 0 10px 0; color: #0f172a; font-size: 32px; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; }
+                    .invoice-meta p { margin: 4px 0; font-size: 14px; color: #475569; }
+                    .invoice-meta strong { color: #0f172a; }
                     .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-bottom: 40px; }
-                    table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
-                    th { text-align: left; padding: 12px; border-bottom: 2px solid #eee; }
-                    td { padding: 12px; border-bottom: 1px solid #eee; }
-                    .total { text-align: right; font-size: 20px; font-weight: bold; }
-                    .footer { margin-top: 50px; font-size: 14px; color: #666; text-align: center; }
-                    @media print { .no-print { display: none; } }
+                    .address-box { background: #f8fafc; padding: 20px; border-radius: 8px; border: 1px solid #e2e8f0; }
+                    .address-box h3 { margin: 0 0 15px 0; color: #1e293b; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; }
+                    .address-box p { margin: 4px 0; font-size: 15px; }
+                    .status-badge { display: inline-block; padding: 6px 12px; background: #dcfce7; color: #166534; border-radius: 20px; font-size: 12px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; }
+                    table { width: 100%; border-collapse: collapse; margin-bottom: 30px; border-radius: 8px; overflow: hidden; }
+                    th { font-size: 13px; text-transform: uppercase; letter-spacing: 1px; color: #475569; background: #f8fafc; text-align: left; padding: 15px; border-bottom: 2px solid #e2e8f0; }
+                    td { padding: 15px; border-bottom: 1px solid #e2e8f0; font-size: 15px; }
+                    .totals-wrapper { display: flex; justify-content: flex-end; }
+                    .totals-table { width: 300px; }
+                    .totals-table td { padding: 8px; border: none; }
+                    .total-row td { border-top: 2px solid #e2e8f0; font-size: 18px; font-weight: 800; color: #0f172a; padding-top: 15px; }
+                    .footer { text-align: center; margin-top: 50px; padding-top: 20px; border-top: 1px solid #e2e8f0; color: #64748b; font-size: 14px; }
+                    @media print { 
+                        body { background: white; padding: 0; margin: 0; }
+                        .invoice-box { box-shadow: none; border: none; padding: 20px; width: 100%; max-width: 100%; }
+                        .no-print { display: none !important; } 
+                    }
                 </style>
             </head>
             <body>
-                <div class="header">
-                    <div class="logo">Salem Farm Mango</div>
-                    <div style="text-align: right;">
-                        <div class="invoice-title">INVOICE</div>
-                        <p>#${order.id.toString().padStart(6, '0')}</p>
-                        <p>${formatDate(order.created_at)}</p>
+                <div class="invoice-box">
+                    <div class="header">
+                        <div class="brand-info">
+                            <h1 style="display: flex; align-items: center; gap: 10px;">
+                                <img src="${window.location.origin}/logo.png" alt="Salem Farm Mango Logo" style="height: 36px; width: auto; object-fit: contain;" />
+                                Salem Farm Mango
+                            </h1>
+                            <p>Premium Quality Mangoes directly from the Farm.</p>
+                            <p>123 Mango Grove, Salem, TN 636001</p>
+                            <p>Email: info@salemfarmmango.com | Phone: +91 9876543210</p>
+                        </div>
+                        <div class="invoice-meta">
+                            <h2>INVOICE</h2>
+                            <p>Invoice No: <strong>#${order.id?.toString().padStart(6, '0') || '000000'}</strong></p>
+                            <p>Date: <strong>${formatDate(order.created_at)}</strong></p>
+                        </div>
                     </div>
-                </div>
 
-                <div class="grid">
-                    <div>
-                        <h3>Billed To:</h3>
-                        <p>${order.shipping_address?.full_name}</p>
-                        <p>${order.shipping_address?.address_line1}</p>
-                        <p>${order.shipping_address?.city}, ${order.shipping_address?.state}</p>
-                        <p>${order.shipping_address?.postal_code}</p>
-                        <p>${order.shipping_address?.phone}</p>
+                    <div class="grid">
+                        <div class="address-box">
+                            <h3>Billed To</h3>
+                            <p><strong>${order.shipping_address?.full_name || 'Customer'}</strong></p>
+                            <p>${order.shipping_address?.address_line1 || 'N/A'}</p>
+                            <p>${order.shipping_address?.city || ''}, ${order.shipping_address?.state || ''} ${order.shipping_address?.postal_code || ''}</p>
+                            <p>Phone: ${order.shipping_address?.phone || 'N/A'}</p>
+                        </div>
+                        <div class="address-box">
+                            <h3>Order Status</h3>
+                            <p>Payment: <span style="text-transform: uppercase; font-weight: 600;">${order.payment_status || 'Pending'}</span></p>
+                            <p>Delivery: <span class="status-badge">${order.status || 'Processing'}</span></p>
+                            ${order.tracking_id ? `<p style="margin-top: 10px;">Tracking ID: <strong>${order.tracking_id}</strong> (${order.courier_partner || 'N/A'})</p>` : ''}
+                        </div>
                     </div>
-                    <div>
-                        <h3>Status:</h3>
-                        <p style="text-transform: uppercase; font-weight: bold;">${order.payment_status} / ${order.status}</p>
+
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Description</th>
+                                <th style="text-align: right;">Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>
+                                    <strong>Premium Salem Mangoes</strong><br>
+                                    <span style="font-size: 13px; color: #64748b;">Includes shipping & taxes</span>
+                                </td>
+                                <td style="text-align: right; vertical-align: top;">₹${subtotal}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <div class="totals-wrapper">
+                        <table class="totals-table">
+                            <tbody>
+                                <tr>
+                                    <td style="text-align: right; color: #64748b; font-weight: 500;">Subtotal:</td>
+                                    <td style="text-align: right;">₹${subtotal}</td>
+                                </tr>
+                                ${discountHtml}
+                                <tr class="total-row">
+                                    <td style="text-align: right;">Total Amount:</td>
+                                    <td style="text-align: right;">₹${order.total_amount || '0'}</td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
-                </div>
 
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Description</th>
-                            <th style="text-align: right;">Amount</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td>Order Total (Items + Shipping)</td>
-                            <td style="text-align: right;">₹${order.total_amount}</td>
-                        </tr>
-                    </tbody>
-                </table>
+                    <div class="footer">
+                        <p style="font-weight: 600; color: #0f172a; margin-bottom: 5px;">Thank you for your business!</p>
+                        <p>If you have any questions about this invoice, please contact us at info@salemfarmmango.com</p>
+                    </div>
 
-                <div class="total">
-                    Total: ₹${order.total_amount}
-                </div>
-
-                <div class="footer">
-                    <p>Thank you for choosing Salem Farm Mango!</p>
-                </div>
-
-                <div class="no-print" style="text-align: center; margin-top: 40px;">
-                    <button onclick="window.print()" style="padding: 10px 20px; cursor: pointer; background: #166534; color: white; border: none; border-radius: 5px;">Print Invoice / Save as PDF</button>
+                    <div class="no-print" style="margin-top: 40px; text-align: center;">
+                        <button onclick="window.print()" style="background: #166534; color: white; border: none; padding: 12px 24px; border-radius: 6px; font-size: 16px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 6px rgba(22, 101, 52, 0.2); transition: background 0.2s;">
+                            Print / Save PDF
+                        </button>
+                    </div>
                 </div>
             </body>
             </html>
@@ -439,6 +496,26 @@ function AccountContent() {
                             </button>
                         ))}
                     </div>
+                    <button
+                        onClick={handleSignOut}
+                        style={{
+                            width: '100%',
+                            padding: '1rem',
+                            borderRadius: '1rem',
+                            background: '#fef2f2',
+                            color: '#dc2626',
+                            border: '1px solid #fee2e2',
+                            fontWeight: '600',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '10px',
+                            marginTop: '0.5rem',
+                            cursor: 'pointer'
+                        }}
+                    >
+                        <LogOut size={20} /> Sign Out
+                    </button>
                 </div>
 
                 {/* Main Content Area */}
@@ -751,7 +828,7 @@ function AccountContent() {
                                             <input
                                                 type="checkbox"
                                                 id="isDefault"
-                                                checked={newAddress.is_default}
+                                                checked={!!newAddress.is_default}
                                                 onChange={e => setNewAddress({ ...newAddress, is_default: e.target.checked })}
                                                 style={{ width: '1.25rem', height: '1.25rem', accentColor: 'var(--color-mango-600)' }}
                                             />
@@ -797,7 +874,7 @@ function AccountContent() {
                     {activeTab === 'profile' && (() => {
                         // Detect if user signed up with phone
                         const isPhoneUser = user?.user_metadata?.auth_method === 'phone';
-                        const userPhone = isPhoneUser ? user?.user_metadata?.phone : (user?.phone || '');
+                        const userPhone = isPhoneUser ? user?.user_metadata?.phone : ((user as any)?.phone || '');
                         const userEmail = isPhoneUser ? '' : user?.email;
 
                         return (
@@ -883,9 +960,5 @@ function AccountContent() {
 }
 
 export default function AccountPage() {
-    return (
-        <Suspense fallback={<div>Loading...</div>}>
-            <AccountContent />
-        </Suspense>
-    );
+    return <AccountContent />;
 }

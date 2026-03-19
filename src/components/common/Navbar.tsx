@@ -1,11 +1,10 @@
 'use client';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { ShoppingCart, User, Menu, Search, LogOut, ChevronDown, Package, MapPin, UserCircle, Home, Store, Sprout, Phone, Truck, Gift, Tag, Share2, HelpCircle } from 'lucide-react';
+import { ShoppingCart, User, Menu, Search, LogOut, ChevronDown, Package, MapPin, UserCircle, Home, Store, Sprout, Phone, Truck, Gift, Tag, Share2, HelpCircle, BookOpen } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
-import { supabase } from '@/lib/supabase';
-
+import { useAuth } from '@/context/AuthContext';
 import { useCart } from '@/context/CartContext';
 
 
@@ -18,41 +17,45 @@ export const Navbar = () => {
     const [searchQuery, setSearchQuery] = useState('');
     const [searchResults, setSearchResults] = useState<any[]>([]);
     const [isSearching, setIsSearching] = useState(false);
-    const [user, setUser] = useState<any>(null);
     const { items, cartCount, isAnimating, setIsCartOpen } = useCart();
+    const { user, signOut } = useAuth();
     const pathname = usePathname();
     const router = useRouter();
 
     const [topBarText, setTopBarText] = useState('');
     const [isTopBarEnabled, setIsTopBarEnabled] = useState(false);
+    const [mysqlCategories, setMysqlCategories] = useState<any[]>([]);
 
     useEffect(() => {
         const fetchSettings = async () => {
-            const { data: textData } = await supabase.from('store_settings').select('value').eq('key', 'top_bar_content').single();
-            if (textData?.value) setTopBarText(textData.value);
-
-            const { data: enabledData } = await supabase.from('store_settings').select('value').eq('key', 'top_bar_enabled').single();
-            if (enabledData?.value !== undefined) {
-                setIsTopBarEnabled(enabledData.value === true || enabledData.value === 'true');
+            try {
+                const res = await fetch('/api/settings');
+                if (res.ok) {
+                    const { settings } = await res.json();
+                    if (settings.top_bar_content) setTopBarText(settings.top_bar_content);
+                    setIsTopBarEnabled(!!settings.top_bar_enabled);
+                }
+            } catch (e) {
+                console.error("Failed to fetch top bar settings", e);
             }
         };
         fetchSettings();
 
-        // Get initial session
-        supabase.auth.getSession().then(({ data: { session } }) => {
-            setUser(session?.user ?? null);
-        });
-
-        // Listen for auth changes
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-            setUser(session?.user ?? null);
-        });
-
-        return () => subscription.unsubscribe();
+        const fetchCategories = async () => {
+            try {
+                const res = await fetch('/api/categories');
+                if (res.ok) {
+                    setMysqlCategories(await res.json());
+                }
+            } catch (e) {
+                console.error("Failed to fetch PHP categories", e);
+            }
+        };
+        fetchCategories();
     }, []);
 
     const handleSignOut = async () => {
-        await supabase.auth.signOut();
+        await signOut();
         router.push('/auth');
     };
 
@@ -65,14 +68,28 @@ export const Navbar = () => {
             }
 
             setIsSearching(true);
-            const { data, error } = await supabase
-                .from('products')
-                .select('*, categories(name)')
-                .or(`name.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%`)
-                .limit(6);
-
-            if (!error && data) {
-                setSearchResults(data);
+            try {
+                const q = searchQuery.trim().toLowerCase();
+                const res = await fetch(`/api/products?search=${encodeURIComponent(q)}&limit=10`);
+                if (res.ok) {
+                    const data = await res.json();
+                    // Relevance scoring:
+                    // 3 = name starts with query (best match)
+                    // 2 = name contains query anywhere
+                    // 1 = only description contains query
+                    const scored = data.map((product: any) => {
+                        const name = (product.name || '').toLowerCase();
+                        let score = 0;
+                        if (name.startsWith(q)) score = 3;
+                        else if (name.includes(q)) score = 2;
+                        else score = 1;
+                        return { ...product, _score: score };
+                    });
+                    scored.sort((a: any, b: any) => b._score - a._score);
+                    setSearchResults(scored.slice(0, 6));
+                }
+            } catch (e) {
+                console.error("Search failed", e);
             }
             setIsSearching(false);
         };
@@ -107,14 +124,17 @@ export const Navbar = () => {
                     overflow: 'hidden',
                     display: 'flex'
                 }}>
-                    <div className="marquee-track">
-                        {/* Duplicate content to create seamless loop effect */}
-                        <div className="marquee-content">
-                            {topBarText} &nbsp;&nbsp;&bull;&nbsp;&nbsp; {topBarText} &nbsp;&nbsp;&bull;&nbsp;&nbsp;
-                        </div>
-                        <div className="marquee-content">
-                            {topBarText} &nbsp;&nbsp;&bull;&nbsp;&nbsp; {topBarText} &nbsp;&nbsp;&bull;&nbsp;&nbsp;
-                        </div>
+                <div className="marquee-track">
+                        {/* Each block has 4 copies — doubled block creates the seamless 50% loop */}
+                        {[0, 1].map(block => (
+                            <div key={block} className="marquee-content">
+                                {[0, 1, 2, 3].map(i => (
+                                    <span key={i}>
+                                        {topBarText}&nbsp;&nbsp;<span aria-hidden="true">•</span>&nbsp;&nbsp;
+                                    </span>
+                                ))}
+                            </div>
+                        ))}
                     </div>
                 </div>
             )}
@@ -203,6 +223,9 @@ export const Navbar = () => {
                                     </Link>
                                     <Link href="/more/share" style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '0.75rem 1rem', textDecoration: 'none', color: 'inherit', fontSize: '0.9rem' }}>
                                         <Share2 size={16} /> Share with Friends
+                                    </Link>
+                                    <Link href="/blog" style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '0.75rem 1rem', textDecoration: 'none', color: 'inherit', fontSize: '0.9rem' }}>
+                                        <BookOpen size={16} /> Blog
                                     </Link>
                                     <Link href="/faq" style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '0.75rem 1rem', textDecoration: 'none', color: 'inherit', fontSize: '0.9rem' }}>
                                         <HelpCircle size={16} /> FAQ
@@ -367,7 +390,7 @@ export const Navbar = () => {
                                                         {product.name}
                                                     </div>
                                                     <div style={{ fontSize: '0.8rem', color: '#6b7280', marginBottom: '0.25rem' }}>
-                                                        {product.categories?.name || 'General'}
+                                                        {product.categories?.name || mysqlCategories.find(c => c.id === product.category_id)?.name || 'General'}
                                                     </div>
                                                     <div style={{ fontWeight: '700', color: '#4d9f4f', fontSize: '0.9rem' }}>
                                                         ₹{product.price}
@@ -398,8 +421,8 @@ export const Navbar = () => {
                                     </div>
                                 ) : (
                                     <div style={{ padding: '2rem', textAlign: 'center', color: '#6b7280' }}>
-                                        No products found for "{searchQuery}"
-                                    </div>
+                                    No products found for &quot;{searchQuery}&quot;
+                                </div>
                                 )}
                             </div>
                         )}
@@ -680,10 +703,71 @@ export const Navbar = () => {
                                     <Link onClick={() => setIsMenuOpen(false)} href="/more/share" style={{ textDecoration: 'none', color: 'inherit', display: 'flex', alignItems: 'center', gap: '10px' }}>
                                         <Share2 size={18} /> Share with Friends
                                     </Link>
+                                    <Link onClick={() => setIsMenuOpen(false)} href="/blog" style={{ textDecoration: 'none', color: 'inherit', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                        <BookOpen size={18} /> Blog
+                                    </Link>
                                     <Link onClick={() => setIsMenuOpen(false)} href="/faq" style={{ textDecoration: 'none', color: 'inherit', display: 'flex', alignItems: 'center', gap: '10px' }}>
                                         <HelpCircle size={18} /> FAQ
                                     </Link>
                                 </div>
+                            </div>
+
+                            {/* Mobile User Info & Sign Out */}
+                            <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--border-light)' }}>
+                                {user ? (
+                                    <>
+                                        <div style={{ marginBottom: '1rem', padding: '0 0.5rem' }}>
+                                            <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', margin: 0 }}>Signed in as</p>
+                                            <p style={{ fontSize: '0.9rem', fontWeight: 'bold', margin: '2px 0 0 0', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                                {user.user_metadata?.auth_method === 'phone'
+                                                    ? `+91 ${user.user_metadata?.phone}`
+                                                    : user.email}
+                                            </p>
+                                        </div>
+                                        <button
+                                            onClick={() => {
+                                                handleSignOut();
+                                                setIsMenuOpen(false);
+                                            }}
+                                            style={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '10px',
+                                                padding: '0.75rem 1rem',
+                                                width: '100%',
+                                                border: 'none',
+                                                background: '#fef2f2',
+                                                borderRadius: '0.5rem',
+                                                cursor: 'pointer',
+                                                color: '#dc2626',
+                                                fontWeight: '600',
+                                                fontSize: '0.9rem'
+                                            }}
+                                        >
+                                            <LogOut size={18} /> Sign Out
+                                        </button>
+                                    </>
+                                ) : (
+                                    <Link
+                                        href="/auth"
+                                        onClick={() => setIsMenuOpen(false)}
+                                        style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '10px',
+                                            padding: '0.75rem 1rem',
+                                            width: '100%',
+                                            textDecoration: 'none',
+                                            background: 'var(--color-mango-50)',
+                                            borderRadius: '0.5rem',
+                                            color: 'var(--color-mango-700)',
+                                            fontWeight: '600',
+                                            fontSize: '0.9rem'
+                                        }}
+                                    >
+                                        <User size={18} /> Sign In / Sign Up
+                                    </Link>
+                                )}
                             </div>
                         </div>
                     </div>
@@ -701,7 +785,7 @@ export const Navbar = () => {
                         </div>
                     </div>
                     <div style={{ flex: 1, overflowY: 'auto', padding: '1rem' }}>
-                        {searchQuery.length < 2 ? (<div style={{ padding: '2rem', textAlign: 'center', color: '#6b7280' }}>Type at least 2 characters to search</div>) : isSearching ? (<div style={{ padding: '2rem', textAlign: 'center', color: '#6b7280' }}>Searching...</div>) : searchResults.length > 0 ? (<> <div style={{ marginBottom: '1rem', fontWeight: '600', color: '#1f2937' }}>Found {searchResults.length} product{searchResults.length !== 1 ? 's' : ''}</div> {searchResults.map((product) => (<Link key={product.id} href={`/product/${product.id}`} onClick={() => { setShowMobileSearch(false); setSearchQuery(''); }} style={{ display: 'flex', gap: '1rem', padding: '1rem', borderRadius: '8px', textDecoration: 'none', color: 'inherit', marginBottom: '0.75rem', border: '1px solid #e5e7eb' }}> {product.images && product.images.length > 0 ? (<img src={product.images[0]} alt={product.name} style={{ width: '80px', height: '80px', objectFit: 'cover', borderRadius: '8px', flexShrink: 0 }} />) : (<div style={{ width: '80px', height: '80px', background: '#f3f4f6', borderRadius: '8px', flexShrink: 0 }} />)} <div style={{ flex: 1, minWidth: 0 }}><div style={{ fontWeight: '600', fontSize: '1rem', marginBottom: '0.25rem' }}>{product.name}</div><div style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.5rem' }}>{product.categories?.name || 'General'}</div><div style={{ fontWeight: '700', color: '#4d9f4f', fontSize: '1.1rem' }}>₹{product.price}</div></div> </Link>))} <Link href={`/shop?search=${encodeURIComponent(searchQuery)}`} onClick={() => { setShowMobileSearch(false); setSearchQuery(''); }} style={{ display: 'block', textAlign: 'center', padding: '1rem', marginTop: '1rem', background: '#4d9f4f', color: 'white', borderRadius: '8px', fontWeight: '600', textDecoration: 'none' }}>View all results →</Link> </>) : (<div style={{ padding: '2rem', textAlign: 'center', color: '#6b7280' }}>No products found for "{searchQuery}"</div>)}
+                        {searchQuery.length < 2 ? (<div style={{ padding: '2rem', textAlign: 'center', color: '#6b7280' }}>Type at least 2 characters to search</div>) : isSearching ? (<div style={{ padding: '2rem', textAlign: 'center', color: '#6b7280' }}>Searching...</div>) : searchResults.length > 0 ? (<> <div style={{ marginBottom: '1rem', fontWeight: '600', color: '#1f2937' }}>Found {searchResults.length} product{searchResults.length !== 1 ? 's' : ''}</div> {searchResults.map((product) => (<Link key={product.id} href={`/product/${product.id}`} onClick={() => { setShowMobileSearch(false); setSearchQuery(''); }} style={{ display: 'flex', gap: '1rem', padding: '1rem', borderRadius: '8px', textDecoration: 'none', color: 'inherit', marginBottom: '0.75rem', border: '1px solid #e5e7eb' }}> {product.images && product.images.length > 0 ? (<img src={product.images[0]} alt={product.name} style={{ width: '80px', height: '80px', objectFit: 'cover', borderRadius: '8px', flexShrink: 0 }} />) : (<div style={{ width: '80px', height: '80px', background: '#f3f4f6', borderRadius: '8px', flexShrink: 0 }} />)} <div style={{ flex: 1, minWidth: 0 }}><div style={{ fontWeight: '600', fontSize: '1rem', marginBottom: '0.25rem' }}>{product.name}</div><div style={{ fontSize: '0.875rem', color: '#6b7280', marginBottom: '0.5rem' }}>{product.categories?.name || mysqlCategories.find(c => c.id === product.category_id)?.name || 'General'}</div><div style={{ fontWeight: '700', color: '#4d9f4f', fontSize: '1.1rem' }}>₹{product.price}</div></div> </Link>))} <Link href={`/shop?search=${encodeURIComponent(searchQuery)}`} onClick={() => { setShowMobileSearch(false); setSearchQuery(''); }} style={{ display: 'block', textAlign: 'center', padding: '1rem', marginTop: '1rem', background: '#4d9f4f', color: 'white', borderRadius: '8px', fontWeight: '600', textDecoration: 'none' }}>View all results →</Link> </>) : (<div style={{ padding: '2rem', textAlign: 'center', color: '#6b7280' }}>No products found for &quot;{searchQuery}&quot;</div>)}
                     </div>
                 </div>
             )}

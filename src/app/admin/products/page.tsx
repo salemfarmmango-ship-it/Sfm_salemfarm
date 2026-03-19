@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
-import { supabase } from '@/lib/supabase';
+
 import { Search, Trash2, Star, CalendarOff, CheckSquare, Square, Filter } from 'lucide-react';
 import { MangoLoader } from '@/components/common/MangoLoader';
 
@@ -34,18 +34,18 @@ export default function AdminProductsPage() {
 
     const fetchProducts = async () => {
         try {
-            const { data, error } = await supabase
-                .from('products')
-                .select(`
-                    *,
-                    categories (
-                        name
-                    )
-                `)
-                .order('created_at', { ascending: false });
-
-            if (error) throw error;
-            setProducts(data || []);
+            const res = await fetch('/api/admin/products');
+            const data = await res.json();
+            
+            if (!res.ok) throw new Error(data.error || 'Failed to fetch products');
+            
+            // The PHP API returns flattened categories or we map them here
+            const mappedData = (data || []).map((p: any) => ({
+                ...p,
+                categories: { name: p.category_name }
+            }));
+            
+            setProducts(mappedData);
         } catch (error) {
             console.error('Error fetching products:', error);
         } finally {
@@ -55,13 +55,15 @@ export default function AdminProductsPage() {
 
     const fetchCategories = async () => {
         try {
-            const { data } = await supabase
-                .from('categories')
-                .select('*')
-                .order('name');
-            setCategories(data || []);
+            const res = await fetch('/api/categories');
+            if (res.ok) {
+                setCategories(await res.json());
+            } else {
+                setCategories([]);
+            }
         } catch (error) {
             console.error('Error fetching categories:', error);
+            setCategories([]);
         }
     };
 
@@ -69,15 +71,16 @@ export default function AdminProductsPage() {
         if (!confirm(`Are you sure you want to delete "${name}"?`)) return;
 
         try {
-            const { error } = await supabase
-                .from('products')
-                .delete()
-                .eq('id', id);
+            const res = await fetch(`/api/admin/products/${id}`, {
+                method: 'DELETE'
+            });
 
-            if (error) throw error;
+            if (!res.ok) {
+                const data = await res.json();
+                throw new Error(data.error || 'Failed to delete product');
+            }
 
             setProducts(products.filter(p => p.id !== id));
-            // alert('Product deleted successfully'); // Removed for cleaner UX
         } catch (error: any) {
             alert(`Failed to delete product: ${error.message}`);
         }
@@ -87,12 +90,16 @@ export default function AdminProductsPage() {
         if (!confirm(`Are you sure you want to delete ${selectedIds.length} products?`)) return;
 
         try {
-            const { error } = await supabase
-                .from('products')
-                .delete()
-                .in('id', selectedIds);
+            const res = await fetch('/api/admin/products', {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ids: selectedIds })
+            });
 
-            if (error) throw error;
+            if (!res.ok) {
+                const data = await res.json();
+                throw new Error(data.error || 'Failed to delete products');
+            }
 
             setProducts(products.filter(p => !selectedIds.includes(p.id)));
             setSelectedIds([]);
@@ -102,13 +109,18 @@ export default function AdminProductsPage() {
     };
 
     const handleBulkUpdate = async (field: string, value: any) => {
+        // ... (existing logic)
         try {
-            const { error } = await supabase
-                .from('products')
-                .update({ [field]: value })
-                .in('id', selectedIds);
+            const res = await fetch('/api/admin/products', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ids: selectedIds, [field]: value })
+            });
 
-            if (error) throw error;
+            if (!res.ok) {
+                const data = await res.json();
+                throw new Error(data.error || 'Failed to update products');
+            }
 
             setProducts(products.map(p =>
                 selectedIds.includes(p.id) ? { ...p, [field]: value } : p
@@ -121,8 +133,9 @@ export default function AdminProductsPage() {
 
     // Filter products first
     const filteredProducts = products.filter(p => {
+        const categoryName = (p.categories as any)?.name || categories.find(c => c.id === p.category_id)?.name || '';
         const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            (p.categories as any)?.name?.toLowerCase().includes(searchQuery.toLowerCase());
+            categoryName.toLowerCase().includes(searchQuery.toLowerCase());
         const matchesCategory = selectedCategory === 'all' || p.category_id?.toString() === selectedCategory;
         return matchesSearch && matchesCategory;
     });
@@ -260,6 +273,7 @@ export default function AdminProductsPage() {
 
                         <div style={{ width: '1px', height: '20px', background: '#d1d5db', margin: '0 0.5rem' }}></div>
 
+
                         <button onClick={() => handleBulkUpdate('season_over', true)} title="Mark Season Over" style={{ padding: '0.5rem', border: '1px solid #d1d5db', borderRadius: '0.25rem', background: 'white', cursor: 'pointer' }}>
                             <CalendarOff size={16} color="#ef4444" />
                         </button>
@@ -278,11 +292,11 @@ export default function AdminProductsPage() {
 
             {products.length === 0 ? (
                 <div className="card" style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
-                    <p>No products yet. Click "Add Product" to create one.</p>
+                    <p>No products yet. Click &quot;Add Product&quot; to create one.</p>
                 </div>
             ) : filteredProducts.length === 0 ? (
                 <div className="card" style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
-                    <p>No products found matching "{searchQuery}".</p>
+                    <p>No products found matching &quot;{searchQuery}&quot;.</p>
                 </div>
             ) : (
                 <div className="card" style={{ padding: '0', overflowX: 'auto', marginBottom: '1rem' }}>
@@ -318,26 +332,32 @@ export default function AdminProductsPage() {
                                     </td>
                                     <td style={{ padding: '1rem' }}>
                                         <div style={{ fontWeight: '500' }}>{p.name}</div>
-                                        {p.is_featured && (
-                                            <span style={{ fontSize: '0.7rem', background: '#fef3c7', color: '#b45309', padding: '2px 6px', borderRadius: '4px', marginTop: '4px', display: 'inline-block' }}>Featured</span>
-                                        )}
+                                        <div style={{ display: 'flex', gap: '4px', marginTop: '4px' }}>
+                                            {(p.is_featured == 1 || p.is_featured === true) && (
+                                                <span style={{ fontSize: '0.7rem', background: '#fef3c7', color: '#b45309', padding: '2px 6px', borderRadius: '4px', display: 'inline-block' }}>Featured</span>
+                                            )}
+                                        </div>
                                     </td>
                                     <td style={{ padding: '1rem', color: 'var(--text-secondary)' }}>
-                                        {(p.categories as any)?.name || 'N/A'}
+                                        {(p.categories as any)?.name || categories.find(c => c.id === p.category_id)?.name || 'N/A'}
                                     </td>
                                     <td style={{ padding: '1rem' }}>₹{p.price}</td>
-                                    <td style={{ padding: '1rem' }}>{p.stock || 0}</td>
+                                    <td style={{ padding: '1rem' }}>{parseInt(p.stock) || 0}</td>
                                     <td style={{ padding: '1rem' }}>
-                                        <span style={{
-                                            padding: '0.25rem 0.5rem',
-                                            borderRadius: '1rem',
-                                            fontSize: '0.8rem',
-                                            background: p.season_over ? '#f3f4f6' : ((p.stock || 0) > 0 ? '#dcfce7' : '#fee2e2'),
-                                            color: p.season_over ? '#4b5563' : ((p.stock || 0) > 0 ? '#166534' : '#991b1b'),
-                                            border: p.season_over ? '1px solid #d1d5db' : 'none'
-                                        }}>
-                                            {p.season_over ? 'Season Over' : ((p.stock || 0) > 0 ? 'In Stock' : 'Out of Stock')}
-                                        </span>
+                                        {/* MySQL returns booleans as strings '0'/'1', must use == 1 */}
+                                        {(() => {
+                                            const isSeasonOver = p.season_over == 1 || p.season_over === true;
+                                            const stockNum = parseInt(p.stock) || 0;
+                                            const bgColor = isSeasonOver ? '#f3f4f6' : (stockNum > 0 ? '#dcfce7' : '#fee2e2');
+                                            const textColor = isSeasonOver ? '#4b5563' : (stockNum > 0 ? '#166534' : '#991b1b');
+                                            const border = isSeasonOver ? '1px solid #d1d5db' : 'none';
+                                            const label = isSeasonOver ? 'Season Over' : (stockNum > 0 ? 'In Stock' : 'Out of Stock');
+                                            return (
+                                                <span style={{ padding: '0.25rem 0.5rem', borderRadius: '1rem', fontSize: '0.8rem', background: bgColor, color: textColor, border }}>
+                                                    {label}
+                                                </span>
+                                            );
+                                        })()}
                                     </td>
                                     <td style={{ padding: '1rem', display: 'flex', gap: '0.5rem' }}>
                                         <Button

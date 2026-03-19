@@ -1,6 +1,5 @@
 'use client';
 import React, { useState } from 'react';
-import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/Button';
 
 export default function BulkEnquiryPage() {
@@ -20,11 +19,14 @@ export default function BulkEnquiryPage() {
         setStatus('idle');
 
         try {
-            const { error } = await supabase
-                .from('bulk_enquiries')
-                .insert([formData]);
+            const response = await fetch('/api/enquiries?type=bulk', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(formData)
+            });
 
-            if (error) throw error;
+            if (!response.ok) throw new Error('Submission failed');
+            
             setStatus('success');
             setFormData({ name: '', email: '', phone: '', quantity: '', message: '' });
         } catch (error) {

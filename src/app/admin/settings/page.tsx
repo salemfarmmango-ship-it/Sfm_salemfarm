@@ -24,6 +24,9 @@ export default function AdminSettingsPage() {
     const [storeLocation, setStoreLocation] = useState('');
     const [contactSaving, setContactSaving] = useState(false);
 
+    const [instagramPosts, setInstagramPosts] = useState('');
+    const [socialSaving, setSocialSaving] = useState(false);
+
     useEffect(() => {
         verifyAdmin();
         fetchSettings();
@@ -47,6 +50,7 @@ export default function AdminSettingsPage() {
                 if (data.settings.store_email) setStoreEmail(data.settings.store_email);
                 if (data.settings.store_address) setStoreAddress(data.settings.store_address);
                 if (data.settings.store_location) setStoreLocation(data.settings.store_location);
+                if (data.settings.instagram_posts) setInstagramPosts(data.settings.instagram_posts);
             }
         } catch (err) {
             console.error('Failed to fetch settings', err);
@@ -123,9 +127,26 @@ export default function AdminSettingsPage() {
         }
     };
 
+    const handleSaveSocial = async () => {
+        setSocialSaving(true);
+        try {
+            await fetch('/api/admin/settings', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ key: 'instagram_posts', value: instagramPosts })
+            });
+            alert('Social media settings updated successfully!');
+        } catch (err) {
+            console.error('Failed to update social settings');
+            alert('Failed to update social settings');
+        } finally {
+            setSocialSaving(false);
+        }
+    };
+
     const verifyAdmin = async () => {
         try {
-            const response = await fetch('/api/admin/verify');
+            const response = await fetch('/api/admin/verify', { cache: 'no-store' });
             const data = await response.json();
 
             if (!data.authenticated) {
@@ -183,8 +204,16 @@ export default function AdminSettingsPage() {
     };
 
     const handleLogout = async () => {
-        await fetch('/api/admin/logout', { method: 'POST' });
-        router.push('/admin-login');
+        try {
+            setLoading(true);
+            await fetch('/api/admin/logout', { method: 'POST' });
+            window.location.href = '/admin-login';
+        } catch (error) {
+            console.error('Logout failed:', error);
+            window.location.href = '/admin-login';
+        } finally {
+            setLoading(false);
+        }
     };
 
     if (loading) {
@@ -591,6 +620,62 @@ export default function AdminSettingsPage() {
                         {contactSaving ? 'Saving...' : 'Save Contact Info'}
                     </button>
                 </div>
+            </div>
+            {/* Social Media Settings Card */}
+            <div style={{
+                background: 'white',
+                padding: '2rem',
+                borderRadius: '0.75rem',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                marginTop: '2rem',
+                marginBottom: '4rem'
+            }}>
+                <h2 style={{ fontSize: '1.25rem', fontWeight: '600', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <span style={{ fontSize: '1.5rem' }}>📱</span> Social Media Settings
+                </h2>
+
+                <div style={{ marginBottom: '1.5rem' }}>
+                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
+                        Instagram Post URLs
+                    </label>
+                    <textarea
+                        value={instagramPosts}
+                        onChange={(e) => setInstagramPosts(e.target.value)}
+                        placeholder="https://www.instagram.com/p/DB12345678/ , https://www.instagram.com/p/DB87654321/"
+                        rows={4}
+                        style={{
+                            width: '100%',
+                            padding: '0.75rem 1rem',
+                            border: '1px solid var(--border-light)',
+                            borderRadius: '0.5rem',
+                            fontSize: '1rem',
+                            fontFamily: 'monospace'
+                        }}
+                    />
+                    <p style={{ fontSize: '0.85rem', color: '#6b7280', marginTop: '0.5rem' }}>
+                        Enter full Instagram post URLs separated by commas. These will be embedded on the homepage.
+                    </p>
+                </div>
+
+                <button
+                    onClick={handleSaveSocial}
+                    disabled={socialSaving}
+                    style={{
+                        padding: '0.5rem 1.5rem',
+                        background: socialSaving ? '#9ca3af' : 'var(--color-mango-600)',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '0.5rem',
+                        fontSize: '0.95rem',
+                        fontWeight: '600',
+                        cursor: socialSaving ? 'not-allowed' : 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem'
+                    }}
+                >
+                    {socialSaving ? 'Saving...' : 'Save Social Settings'}
+                </button>
             </div>
         </div>
     );

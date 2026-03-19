@@ -1,15 +1,16 @@
-import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY!;
-const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+import { NextRequest, NextResponse } from 'next/server';
+import { verifyAdmin, unauthorizedResponse } from '@/lib/adminAuth';
 
 const DELHIVERY_API_KEY = process.env.DELHIVERY_API_KEY;
 const PICKUP_LOCATION = process.env.DELHIVERY_PICKUP_LOCATION;
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
     try {
+        const { authenticated, token } = await verifyAdmin(request);
+        if (!authenticated) {
+            return unauthorizedResponse();
+        }
+
         if (!DELHIVERY_API_KEY || !PICKUP_LOCATION) {
             console.error('[Delhivery] Missing env vars. API_KEY present:', !!DELHIVERY_API_KEY, 'PICKUP_LOCATION:', PICKUP_LOCATION);
             return NextResponse.json({ error: 'Delhivery API Key or Pickup Location not configured in .env' }, { status: 500 });
@@ -23,24 +24,18 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Order ID is required' }, { status: 400 });
         }
 
-        // 1. Fetch full order details using Admin role
-        const { data: order, error: orderError } = await supabaseAdmin
-            .from('orders')
-            .select(`
-                *,
-                profiles:user_id ( full_name ),
-                order_items (
-                    quantity,
-                    price,
-                    products ( name, size )
-                )
-            `)
-            .eq('id', orderId)
-            .single();
+        // 1. Fetch full order details using PHP proxy
+        const orderRes = await fetch(`http://127.0.0.1/SFM/backend/api/orders.php?id=${orderId}`, {
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'X-SFM-Token': token || ''
+            }
+        });
+        const order = await orderRes.json();
 
-        if (orderError || !order) {
-            console.error('[Delhivery] Order fetch error:', orderError);
-            return NextResponse.json({ error: 'Order not found: ' + (orderError?.message || 'unknown') }, { status: 404 });
+        if (!orderRes.ok || !order) {
+            console.error('[Delhivery] Order fetch error:', order.error);
+            return NextResponse.json({ error: 'Order not found: ' + (order.error || 'unknown') }, { status: 404 });
         }
 
         console.log('[Delhivery] Order found. Status:', order.status, 'is_delhivery_automated:', order.is_delhivery_automated);
@@ -75,8 +70,8 @@ export async function POST(request: Request) {
         const productsList: string[] = [];
 
         order.order_items?.forEach((item: any) => {
-            const sizeStr = item.products?.size || '1kg';
-            productsList.push(`${item.quantity}x ${item.products?.name}`);
+            const sizeStr = item.size || '1kg';
+            productsList.push(`${item.quantity}x ${item.name}`);
 
             let weight = 1000;
             const lowerSize = sizeStr.toLowerCase().replace(/\s/g, '');
@@ -197,19 +192,27 @@ export async function POST(request: Request) {
 
         console.log('[Delhivery] SUCCESS! Waybill:', waybill);
 
-        // 8. Save to Supabase
-        const { error: dbUpdateError } = await supabaseAdmin
-            .from('orders')
-            .update({
-                tracking_id: waybill,
+        // 8. Save to MySQL via PHP backend
+        const updateRes = await fetch(`http://127.0.0.1/SFM/backend/api/orders.php`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`,
+                'X-SFM-Token': token || ''
+            },
+            body: JSON.stringify({
+                ids: [order.id],
+                tracking_id: String(waybill),
                 courier_partner: 'Delhivery',
                 is_delhivery_automated: true
             })
-            .eq('id', order.id);
+        });
 
-        if (dbUpdateError) {
-            console.error('[Delhivery] DB update error:', dbUpdateError);
-            return NextResponse.json({ error: 'Shipment created but failed to save tracking ID in database', waybill }, { status: 500 });
+        const updateData = await updateRes.json();
+
+        if (!updateRes.ok) {
+            console.error('[Delhivery] DB update error:', updateData.error);
+            return NextResponse.json({ error: 'Shipment created but failed to save tracking ID in database: ' + updateData.error, tracking_id: waybill }, { status: 500 });
         }
 
         console.log('[Delhivery] Tracking saved to database for order:', order.id);

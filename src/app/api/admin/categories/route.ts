@@ -1,62 +1,64 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { verifyAdmin, unauthorizedResponse } from '@/lib/adminAuth';
 
 export const dynamic = 'force-dynamic';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY!;
-
-const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
-
-async function verifyAdmin(request: NextRequest) {
-    const adminId = request.cookies.get('admin_session')?.value;
-    if (!adminId) return false;
-
-    const { data } = await supabaseAdmin
-        .from('admin_users')
-        .select('id')
-        .eq('id', adminId)
-        .single();
-
-    return !!data;
-}
-
 export async function GET(request: NextRequest) {
     try {
-        const { data, error } = await supabaseAdmin
-            .from('categories')
-            .select('*')
-            .order('name', { ascending: true });
+        const { authenticated, token } = await verifyAdmin(request);
+        if (!authenticated) {
+            return unauthorizedResponse();
+        }
 
-        if (error) throw error;
+        const res = await fetch('http://127.0.0.1/SFM/backend/api/categories.php', {
+            cache: 'no-store',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'X-SFM-Token': token || ''
+            }
+        });
+
+        if (!res.ok) {
+            return NextResponse.json({ error: 'Failed to fetch categories' }, { status: res.status });
+        }
+
+        const data = await res.json();
         return NextResponse.json(data);
     } catch (error: any) {
+        console.error('Categories GET error:', error);
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
 }
 
 export async function POST(request: NextRequest) {
     try {
-        if (!await verifyAdmin(request)) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        const { authenticated, token } = await verifyAdmin(request);
+        if (!authenticated) {
+            return unauthorizedResponse();
         }
 
         const body = await request.json();
-        const { name, slug, image_url } = body;
 
-        if (!name || !slug) {
-            return NextResponse.json({ error: 'Name and slug are required' }, { status: 400 });
+        // Proxy to PHP backend
+        const res = await fetch('http://127.0.0.1/SFM/backend/api/categories.php', {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`,
+                'X-SFM-Token': token || ''
+            },
+            body: JSON.stringify(body)
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+            return NextResponse.json({ error: data.error || 'Failed to create category' }, { status: res.status });
         }
 
-        const { data, error } = await supabaseAdmin
-            .from('categories')
-            .insert([{ name, slug, image_url }])
-            .select()
-            .single();
-
-        if (error) throw error;
         return NextResponse.json(data);
     } catch (error: any) {
+        console.error('Categories POST error:', error);
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
 }

@@ -1,6 +1,5 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/Button';
 
 type ShippingRate = {
@@ -24,18 +23,17 @@ export default function AdminShippingPage() {
 
     const fetchRates = async () => {
         setLoading(true);
-        const { data, error } = await supabase
-            .from('shipping_rates')
-            .select('*')
-            .order('state_name', { ascending: true });
-
-        if (error) {
+        try {
+            const res = await fetch('/api/admin/shipping');
+            if (!res.ok) throw new Error('Failed to fetch rates');
+            const data = await res.json();
+            setRates(data || []);
+        } catch (error) {
             console.error('Error fetching rates:', error);
             alert('Failed to fetch shipping rates');
-        } else {
-            setRates(data || []);
+        } finally {
+            setLoading(false);
         }
-        setLoading(false);
     };
 
     const handleEdit = (rate: ShippingRate) => {
@@ -45,19 +43,28 @@ export default function AdminShippingPage() {
 
     const handleSave = async (id: number) => {
         setSaving(true);
-        const { error } = await supabase
-            .from('shipping_rates')
-            .update({ charge: parseFloat(editValue) })
-            .eq('id', id);
-
-        if (error) {
-            console.error('Error updating rate:', error);
-            alert('Failed to update rate');
-        } else {
+        try {
+            const res = await fetch(`/api/admin/shipping`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ id, charge: parseFloat(editValue) })
+            });
+            
+            if (!res.ok) {
+                const data = await res.json();
+                throw new Error(data.error || 'Failed to update rate');
+            }
+            
             setRates(rates.map(r => r.id === id ? { ...r, charge: parseFloat(editValue) } : r));
             setEditingId(null);
+        } catch (error: any) {
+            console.error('Error updating rate:', error);
+            alert(`Failed to update rate: ${error.message}`);
+        } finally {
+            setSaving(false);
         }
-        setSaving(false);
     };
 
     const handleCancel = () => {

@@ -36,9 +36,13 @@ export async function POST(request: Request) {
         const data = await response.json();
         console.log('Fast2SMS Response:', JSON.stringify(data));
 
+        if (!data.return) {
+            console.error('Fast2SMS API Error:', data.message || 'Unknown error');
+        }
+
         return NextResponse.json(data);
     } catch (error) {
-        console.error('Failed to send SMS:', error);
-        return NextResponse.json({ error: 'Failed to send SMS' }, { status: 500 });
+        console.error('Failed to send SMS (Route Internal Error):', error);
+        return NextResponse.json({ error: 'Failed to send SMS', details: error instanceof Error ? error.message : String(error) }, { status: 500 });
     }
 }

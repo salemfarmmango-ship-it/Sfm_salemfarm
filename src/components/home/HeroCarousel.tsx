@@ -98,7 +98,8 @@ export const HeroCarousel = ({ livePreviewSlides, isCompact, forceMode }: HeroCa
                             bgColor: s.bg_color,
                             badge: s.badge,
                             badgeColor: s.badge_color,
-                            bgPositionDesktop: s.bg_position_desktop
+                            bgPositionDesktop: s.bg_position_desktop,
+                            textWidth: s.text_width
                         })));
                     }
                 })

@@ -7,16 +7,22 @@ const serviceAccount = {
 };
 
 if (!admin.apps.length) {
-    if (serviceAccount.project_id && serviceAccount.client_email && serviceAccount.private_key) {
-        try {
+    try {
+        // [New Fix for cPanel]: Use the JSON file directly since the env string is too long/complex for the shell export
+        const serviceAccountPath = process.env.FIREBASE_SERVICE_ACCOUNT_PATH || 'sfmo-5be58-d22782db0cd3.json';
+        
+        if (serviceAccount.project_id && serviceAccount.client_email && serviceAccount.private_key) {
             admin.initializeApp({
                 credential: admin.credential.cert(serviceAccount as any),
             });
-        } catch (error) {
-            console.error('Firebase admin initialization error', error);
+        } else if (serviceAccountPath) {
+             // Fallback to local JSON file
+             admin.initializeApp({
+                credential: admin.credential.cert(serviceAccountPath),
+            });
         }
-    } else {
-        console.warn('Firebase Admin credentials missing. Notifications might not work.');
+    } catch (error) {
+        console.error('Firebase admin initialization error', error);
     }
 }
 

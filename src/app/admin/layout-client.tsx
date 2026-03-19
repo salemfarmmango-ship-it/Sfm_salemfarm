@@ -2,8 +2,8 @@
 import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { Package, Users, BarChart, Settings, Home, ShoppingCart, Truck, MessageSquare, LogOut, Tag, Bell } from 'lucide-react';
-import { AdminRealtimeNotifier } from '@/components/admin/AdminRealtimeNotifier';
+import { Package, Users, BarChart, Settings, Home, ShoppingCart, Truck, MessageSquare, LogOut, Tag, Bell, FileText } from 'lucide-react';
+
 import { MangoLoader } from '@/components/common/MangoLoader';
 
 export default function AdminLayout({
@@ -34,7 +34,7 @@ export default function AdminLayout({
 
     const verifyAdmin = async () => {
         try {
-            const response = await fetch('/api/admin/verify');
+            const response = await fetch('/api/admin/verify', { cache: 'no-store' });
             const data = await response.json();
 
             if (!data.authenticated) {
@@ -51,8 +51,16 @@ export default function AdminLayout({
     };
 
     const handleLogout = async () => {
-        await fetch('/api/admin/logout', { method: 'POST' });
-        router.push('/admin-login');
+        try {
+            setLoading(true);
+            await fetch('/api/admin/logout', { method: 'POST' });
+            window.location.href = '/admin-login';
+        } catch (error) {
+            console.error('Admin logout failed:', error);
+            window.location.href = '/admin-login'; // Force redirect even on error
+        } finally {
+            setLoading(false);
+        }
     };
 
     if (loading) {
@@ -66,6 +74,7 @@ export default function AdminLayout({
     const navItems = [
         { href: '/admin', label: 'Dashboard', icon: <BarChart size={20} /> },
         { href: '/admin/products', label: 'Products', icon: <Package size={20} /> },
+        { href: '/admin/blogs', label: 'Blogs', icon: <FileText size={20} /> },
         { href: '/admin/categories', label: 'Categories', icon: <Package size={20} /> },
         { href: '/admin/orders', label: 'Orders', icon: <ShoppingCart size={20} /> },
         { href: '/admin/notifications', label: 'Notifications', icon: <Bell size={20} /> },
@@ -246,7 +255,7 @@ export default function AdminLayout({
                 overflowX: 'hidden',
                 width: '100%'
             }}>
-                <AdminRealtimeNotifier />
+
                 {children}
             </main>
         </div>

@@ -1,43 +1,47 @@
 import { MetadataRoute } from 'next'
-import { createClient } from '@supabase/supabase-js'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-const supabase = createClient(supabaseUrl, supabaseAnonKey)
+
+export const dynamic = 'force-dynamic';
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-    const baseUrl = 'https://salemfarmmango.com'
+    const baseUrl = 'https://salemfarmmango.com';
 
-    // Fetch product slugs from Supabase
-    const { data: products } = await supabase
-        .from('products')
-        .select('slug, updated_at')
-        .not('slug', 'is', null)
-
-    const productUrls = (products || []).map((product) => ({
-        url: `${baseUrl}/product/${product.slug}`,
-        lastModified: product.updated_at || new Date(),
-        changeFrequency: 'weekly' as const,
-        priority: 0.8,
-    }))
-
-    const staticRoutes = [
+    // Base routes
+    const routes = [
         '',
-        '/shop',
-        '/offers',
         '/about',
+        '/shop',
         '/contact',
-        '/faq',
-        '/shipping',
-        '/terms',
-        '/privacy',
-        '/returns',
+        '/auth',
+        '/checkout',
     ].map((route) => ({
         url: `${baseUrl}${route}`,
         lastModified: new Date(),
-        changeFrequency: route === '' ? ('daily' as const) : ('weekly' as const),
-        priority: route === '' ? 1.0 : route === '/shop' || route === '/offers' ? 0.9 : 0.7,
-    }))
+        changeFrequency: 'weekly' as any,
+        priority: route === '' ? 1 : 0.8,
+    }));
 
-    return [...staticRoutes, ...productUrls]
+    try {
+        // Fetch all generic products available
+        const res = await fetch('http://localhost/SFM/backend/api/products.php', { cache: 'no-store' });
+        if (!res.ok) throw new Error('Failed to fetch products for sitemap');
+        
+        const products = await res.json();
+
+        let productRoutes: MetadataRoute.Sitemap = [];
+
+        if (Array.isArray(products)) {
+            productRoutes = products.map((product: any) => ({
+                url: `${baseUrl}/product/${product.id}`,
+                lastModified: product.updated_at ? new Date(product.updated_at) : new Date(),
+                changeFrequency: 'weekly' as any,
+                priority: 0.7,
+            }));
+        }
+
+        return [...routes, ...productRoutes];
+    } catch (e) {
+        console.error('Error generating Sitemap', e);
+        return routes;
+    }
 }

@@ -2,8 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/Button';
-import { supabase } from '@/lib/supabase';
-import { Trash2, Plus, ExternalLink, Image as ImageIcon } from 'lucide-react';
+import { Trash2, Plus, ExternalLink, Image as ImageIcon, ToggleLeft, ToggleRight } from 'lucide-react';
 import Image from 'next/image';
 
 interface Offer {
@@ -11,8 +10,8 @@ interface Offer {
     title: string;
     description: string;
     coupon_code: string;
-    image_url: string;
-    is_active: boolean;
+    image_url: string | null;
+    is_active: boolean | 1 | 0;
 }
 
 export default function AdminOffersPage() {
@@ -32,15 +31,13 @@ export default function AdminOffersPage() {
 
     const fetchOffers = async () => {
         setLoading(true);
-        const { data, error } = await supabase
-            .from('offers')
-            .select('*')
-            .order('created_at', { ascending: false });
-
-        if (error) {
+        try {
+            const res = await fetch('/api/admin/offers');
+            if (!res.ok) throw new Error('Failed to fetch offers');
+            const data = await res.json();
+            setOffers(Array.isArray(data) ? data : []);
+        } catch (error) {
             console.error('Error fetching offers:', error);
-        } else {
-            setOffers(data || []);
         }
         setLoading(false);
     };
@@ -53,27 +50,28 @@ export default function AdminOffersPage() {
         }
 
         setSubmitting(true);
-        const { data, error } = await supabase
-            .from('offers')
-            .insert([{
-                title,
-                description,
-                coupon_code: couponCode.toUpperCase(),
-                image_url: imageUrl,
-                is_active: true
-            }])
-            .select()
-            .single();
+        try {
+            const res = await fetch('/api/admin/offers', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    title,
+                    description,
+                    coupon_code: couponCode.toUpperCase(),
+                    image_url: imageUrl || null,
+                    is_active: true
+                })
+            });
 
-        if (error) {
-            console.error('Error adding offer:', error);
-            alert('Failed to add offer: ' + error.message);
-        } else {
-            setOffers([data, ...offers]);
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Failed to create offer');
+
+            await fetchOffers();
             setTitle('');
             setDescription('');
             setCouponCode('');
             setImageUrl('');
+
             // Broadcast Push Notification for New Offer
             fetch('/api/notifications/send', {
                 method: 'POST',
@@ -84,13 +82,14 @@ export default function AdminOffersPage() {
                         title: 'New Offer! 🥭',
                         body: `${title} - Use code: ${couponCode.toUpperCase()}`,
                         url: `/offers`,
-                        tag: `offer-${data.id}`,
                         icon: imageUrl || 'https://img.salemfarmmango.com/uploads/SFMLOGO.png'
                     }
                 })
-            }).catch(err => console.error('Failed to broadcast Push Notification:', err));
+            }).catch(err => console.error('Failed to send notification:', err));
 
             alert('Offer added successfully!');
+        } catch (err: any) {
+            alert('Failed to add offer: ' + err.message);
         }
         setSubmitting(false);
     };
@@ -98,30 +97,35 @@ export default function AdminOffersPage() {
     const handleDeleteOffer = async (id: number) => {
         if (!confirm('Are you sure you want to delete this offer?')) return;
 
-        const { error } = await supabase
-            .from('offers')
-            .delete()
-            .eq('id', id);
-
-        if (error) {
-            console.error('Error deleting offer:', error);
-            alert('Failed to delete offer');
-        } else {
+        try {
+            const res = await fetch(`/api/admin/offers?id=${id}`, { method: 'DELETE' });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Failed to delete');
             setOffers(offers.filter(o => o.id !== id));
+        } catch (err: any) {
+            alert('Failed to delete offer: ' + err.message);
         }
     };
 
-    const toggleOfferStatus = async (id: number, currentStatus: boolean) => {
-        const { error } = await supabase
-            .from('offers')
-            .update({ is_active: !currentStatus })
-            .eq('id', id);
-
-        if (error) {
-            console.error('Error updating status:', error);
-            alert('Failed to update status');
-        } else {
-            setOffers(offers.map(o => o.id === id ? { ...o, is_active: !currentStatus } : o));
+    const toggleOfferStatus = async (offer: Offer) => {
+        const newStatus = !offer.is_active;
+        try {
+            const res = await fetch(`/api/admin/offers?id=${offer.id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    title: offer.title,
+                    description: offer.description,
+                    coupon_code: offer.coupon_code,
+                    image_url: offer.image_url,
+                    is_active: newStatus
+                })
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Failed to update status');
+            setOffers(offers.map(o => o.id === offer.id ? { ...o, is_active: newStatus } : o));
+        } catch (err: any) {
+            alert('Failed to update status: ' + err.message);
         }
     };
 
@@ -129,9 +133,7 @@ export default function AdminOffersPage() {
         <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '2rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
                 <h1 style={{ fontSize: '2rem', fontWeight: '800' }}>Manage Offers</h1>
-                <Button onClick={fetchOffers} variant="outline" style={{ display: 'flex', gap: '8px' }}>
-                    Refresh
-                </Button>
+                <Button onClick={fetchOffers} variant="outline">Refresh</Button>
             </div>
 
             {/* Add Offer Form */}
@@ -156,7 +158,7 @@ export default function AdminOffersPage() {
                         <input
                             type="text"
                             value={couponCode}
-                            onChange={(e) => setCouponCode(e.target.value)}
+                            onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
                             placeholder="e.g. MANGO20"
                             style={{ padding: '0.75rem', border: '1px solid #e2e8f0', borderRadius: '8px' }}
                             required
@@ -168,7 +170,7 @@ export default function AdminOffersPage() {
                             value={description}
                             onChange={(e) => setDescription(e.target.value)}
                             placeholder="Describe the offer details..."
-                            style={{ padding: '0.75rem', border: '1px solid #e2e8f0', borderRadius: '8px', minHeight: '100px' }}
+                            style={{ padding: '0.75rem', border: '1px solid #e2e8f0', borderRadius: '8px', minHeight: '100px', resize: 'vertical' }}
                         />
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', gridColumn: 'span 2' }}>
@@ -182,12 +184,12 @@ export default function AdminOffersPage() {
                                 style={{ flex: 1, padding: '0.75rem', border: '1px solid #e2e8f0', borderRadius: '8px' }}
                             />
                             {imageUrl && imageUrl.startsWith('http') && (
-                                <div style={{ width: '50px', height: '40px', position: 'relative', borderRadius: '4px', overflow: 'hidden', border: '1px solid #eee' }}>
+                                <div style={{ width: '50px', height: '40px', position: 'relative', borderRadius: '4px', overflow: 'hidden', border: '1px solid #eee', flexShrink: 0 }}>
                                     <Image src={imageUrl} alt="Preview" fill style={{ objectFit: 'cover' }} unoptimized />
                                 </div>
                             )}
                         </div>
-                        <p style={{ fontSize: '0.75rem', color: '#64748b' }}>Provide a direct link to an image (e.g., from Supabase Storage or Unsplash)</p>
+                        <p style={{ fontSize: '0.75rem', color: '#64748b' }}>Provide a direct image URL (optional)</p>
                     </div>
                     <div style={{ gridColumn: 'span 2' }}>
                         <Button type="submit" disabled={submitting} style={{ width: '100%', padding: '1rem' }}>
@@ -199,12 +201,12 @@ export default function AdminOffersPage() {
 
             {/* Offers List */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                <h2 style={{ fontSize: '1.25rem', fontWeight: '700' }}>Existing Offers</h2>
+                <h2 style={{ fontSize: '1.25rem', fontWeight: '700' }}>Existing Offers ({offers.length})</h2>
                 {loading ? (
                     <p>Loading offers...</p>
                 ) : offers.length === 0 ? (
                     <div className="card" style={{ padding: '3rem', textAlign: 'center', color: '#64748b' }}>
-                        No offers created yet.
+                        No offers created yet. Use the form above to add one.
                     </div>
                 ) : (
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '1rem' }}>
@@ -212,7 +214,7 @@ export default function AdminOffersPage() {
                             <div key={offer.id} className="card" style={{ display: 'flex', padding: '1rem', alignItems: 'center', gap: '1.5rem' }}>
                                 <div style={{ width: '100px', height: '80px', position: 'relative', background: '#f8fafc', borderRadius: '8px', overflow: 'hidden', flexShrink: 0 }}>
                                     {offer.image_url ? (
-                                        <Image src={offer.image_url} alt={offer.title} fill style={{ objectFit: 'cover' }} />
+                                        <Image src={offer.image_url} alt={offer.title} fill style={{ objectFit: 'cover' }} unoptimized />
                                     ) : (
                                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
                                             <ImageIcon style={{ color: '#cbd5e1' }} />
@@ -220,12 +222,10 @@ export default function AdminOffersPage() {
                                     )}
                                 </div>
                                 <div style={{ flex: 1 }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '4px' }}>
                                         <h3 style={{ fontWeight: '700', fontSize: '1.1rem' }}>{offer.title}</h3>
                                         <span style={{
-                                            padding: '2px 8px',
-                                            borderRadius: '4px',
-                                            fontSize: '0.7rem',
+                                            padding: '2px 8px', borderRadius: '4px', fontSize: '0.7rem',
                                             background: offer.is_active ? '#dcfce7' : '#fee2e2',
                                             color: offer.is_active ? '#166534' : '#991b1b',
                                             fontWeight: '600'
@@ -233,18 +233,20 @@ export default function AdminOffersPage() {
                                             {offer.is_active ? 'ACTIVE' : 'INACTIVE'}
                                         </span>
                                     </div>
-                                    <p style={{ fontSize: '0.85rem', color: '#64748b', margin: '4px 0' }}>{offer.description || 'No description'}</p>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                        <span style={{ fontSize: '0.9rem', fontWeight: '700', color: 'var(--color-green-700)' }}>{offer.coupon_code}</span>
-                                    </div>
+                                    <p style={{ fontSize: '0.85rem', color: '#64748b', margin: '2px 0 6px' }}>{offer.description || 'No description'}</p>
+                                    <span style={{ fontSize: '0.9rem', fontWeight: '700', color: 'var(--color-green-700)', background: '#f0fdf4', padding: '3px 10px', borderRadius: '4px' }}>
+                                        {offer.coupon_code}
+                                    </span>
                                 </div>
-                                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                <div style={{ display: 'flex', gap: '0.5rem', flexShrink: 0 }}>
                                     <Button
-                                        onClick={() => toggleOfferStatus(offer.id, offer.is_active)}
+                                        onClick={() => toggleOfferStatus(offer)}
                                         variant="outline"
-                                        style={{ padding: '0.5rem 1rem' }}
+                                        style={{ padding: '0.5rem 1rem', display: 'flex', alignItems: 'center', gap: '6px' }}
                                     >
-                                        {offer.is_active ? 'Deactivate' : 'Activate'}
+                                        {offer.is_active
+                                            ? <><ToggleRight size={16} /> Deactivate</>
+                                            : <><ToggleLeft size={16} /> Activate</>}
                                     </Button>
                                     <Button
                                         onClick={() => handleDeleteOffer(offer.id)}

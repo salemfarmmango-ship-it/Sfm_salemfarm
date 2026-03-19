@@ -6,9 +6,26 @@ import { useCart } from '@/context/CartContext';
 import { Trash2, Minus, Plus, ArrowRight } from 'lucide-react';
 
 export default function CartPage() {
-    const { items, removeFromCart, addToCart, decrementItem } = useCart();
+    const { items, removeFromCart, addToCart, decrementItem, updateItemWeight } = useCart();
+
+    const handleWeightChange = (item: { cartItemId: string; weight: string; price: number; id: number }, newWeight: string) => {
+        // Derive the 1kg base price from the current item weight + price
+        const currentMultiplier = item.weight === '5kg' ? 5 : item.weight === '3kg' ? 3 : 1;
+        const basePrice = item.price / currentMultiplier;
+        updateItemWeight(item.cartItemId, newWeight, basePrice);
+    };
 
     const subtotal = items.reduce((acc, item) => acc + (item.price * item.quantity), 0);
+
+    const formatWeight = (name: string, weight?: string) => {
+        if (!weight) return null;
+        const normalizedName = name.toLowerCase();
+        const normalizedWeight = weight.toLowerCase().trim();
+        if (normalizedName.includes(`(${normalizedWeight})`) || normalizedName.includes(`${normalizedWeight}`)) {
+            return null;
+        }
+        return weight;
+    };
 
     return (
         <div className="container" style={{ padding: 'var(--space-8) var(--space-4)', maxWidth: '1200px' }}>
@@ -31,7 +48,7 @@ export default function CartPage() {
                 }
                 .cart-header {
                     display: grid;
-                    grid-template-columns: 2.5fr 1fr 1fr 0.5fr;
+                    grid-template-columns: 2.5fr 0.8fr 1fr 1fr 0.5fr;
                     padding: 1rem 1.5rem;
                     background: #f9fafb;
                     border-bottom: 1px solid var(--border-light);
@@ -41,7 +58,7 @@ export default function CartPage() {
                 }
                 .cart-item {
                     display: grid;
-                    grid-template-columns: 2.5fr 1fr 1fr 0.5fr;
+                    grid-template-columns: 2.5fr 0.8fr 1fr 1fr 0.5fr;
                     align-items: center;
                     padding: 1.5rem;
                     border-bottom: 1px solid var(--border-light);
@@ -129,12 +146,13 @@ export default function CartPage() {
                     <div className="cart-items-container">
                         <div className="cart-header desktop-only">
                             <div>Product</div>
+                            <div>Weight</div>
                             <div>Price</div>
                             <div>Quantity</div>
                             <div style={{ textAlign: 'right' }}>Action</div>
                         </div>
                         {items.map((item) => (
-                            <div key={item.id} className="cart-item">
+                            <div key={item.cartItemId} className="cart-item">
 
                                 {/* Top Row Wrapper for Mobile */}
                                 <div className="item-top-row">
@@ -147,9 +165,42 @@ export default function CartPage() {
 
                                     {/* Name & Unit Price */}
                                     <div className="item-details-col">
-                                        <h3 style={{ fontSize: '1rem', fontWeight: '600', marginBottom: '4px', lineHeight: '1.4', color: 'var(--color-text-primary)' }}>{item.name}</h3>
+                                        <h3 style={{ fontSize: '1rem', fontWeight: '600', marginBottom: '4px', lineHeight: '1.4', color: 'var(--color-text-primary)' }}>
+                                            {item.name}
+                                            <span className="mobile-only" style={{ fontWeight: 'normal', color: 'var(--text-secondary)', marginLeft: '4px' }}>
+                                                {formatWeight(item.name, item.weight) ? `(${item.weight})` : ''}
+                                            </span>
+                                        </h3>
                                         <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>₹{item.price}</p>
                                     </div>
+                                </div>
+
+                                {/* Weight Selector (Desktop) */}
+                                <div className="desktop-only" style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', alignItems: 'flex-start' }}>
+                                    {['1kg', '3kg', '5kg'].map((w) => (
+                                        <button
+                                            key={w}
+                                            onClick={() => handleWeightChange(item, w)}
+                                            style={{
+                                                width: '52px',
+                                                height: '52px',
+                                                fontSize: '0.82rem',
+                                                border: `1.5px solid ${item.weight === w ? '#16a34a' : '#d1d5db'}`,
+                                                background: item.weight === w ? '#f0fdf4' : 'white',
+                                                color: item.weight === w ? '#15803d' : '#374151',
+                                                borderRadius: '8px',
+                                                cursor: 'pointer',
+                                                fontWeight: item.weight === w ? 700 : 500,
+                                                transition: 'all 0.15s',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                boxShadow: item.weight === w ? '0 0 0 2px #bbf7d0' : 'none',
+                                            }}
+                                        >
+                                            {w}
+                                        </button>
+                                    ))}
                                 </div>
 
                                 {/* Price (Desktop) */}
@@ -158,11 +209,11 @@ export default function CartPage() {
                                 {/* Controls Row (Mobile combines controls + total here) */}
                                 <div className="item-controls-col">
                                     <div style={{ display: 'flex', alignItems: 'center', border: '1px solid var(--border-light)', borderRadius: '6px', overflow: 'hidden', background: 'white' }}>
-                                        <button onClick={() => decrementItem(item.id)} style={{ padding: '8px 12px', background: 'white', border: 'none', cursor: 'pointer', display: 'flex', borderRight: '1px solid var(--border-light)' }}>
+                                        <button onClick={() => decrementItem(item.cartItemId)} style={{ padding: '8px 12px', background: 'white', border: 'none', cursor: 'pointer', display: 'flex', borderRight: '1px solid var(--border-light)' }}>
                                             <Minus size={16} />
                                         </button>
                                         <span style={{ padding: '0 12px', fontSize: '0.95rem', fontWeight: '600', minWidth: '36px', textAlign: 'center' }}>{item.quantity}</span>
-                                        <button onClick={() => addToCart(item)} style={{ padding: '8px 12px', background: 'white', border: 'none', cursor: 'pointer', display: 'flex', borderLeft: '1px solid var(--border-light)' }}>
+                                        <button onClick={() => addToCart({ ...item, size: item.weight }, 1, false)} style={{ padding: '8px 12px', background: 'white', border: 'none', cursor: 'pointer', display: 'flex', borderLeft: '1px solid var(--border-light)' }}>
                                             <Plus size={16} />
                                         </button>
                                     </div>
@@ -178,7 +229,7 @@ export default function CartPage() {
                                 {/* Remove Button */}
                                 <div className="desktop-only" style={{ textAlign: 'right' }}>
                                     <button
-                                        onClick={() => removeFromCart(item.id)}
+                                        onClick={() => removeFromCart(item.cartItemId)}
                                         style={{ color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', padding: '8px', borderRadius: '50%', transition: 'background 0.2s' }}
                                         title="Remove Item"
                                     >
@@ -189,7 +240,7 @@ export default function CartPage() {
                                 {/* Mobile Remove Button (Absolute) */}
                                 <button
                                     className="mobile-only mobile-remove-btn"
-                                    onClick={() => removeFromCart(item.id)}
+                                    onClick={() => removeFromCart(item.cartItemId)}
                                     style={{ color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', padding: '4px' }}
                                 >
                                     <Trash2 size={18} />
@@ -235,7 +286,7 @@ export default function CartPage() {
                         <Trash2 size={32} /> {/* Using Trash Icon as generic 'empty' placeholder or ShoppingBag would be better but keeping simple */}
                     </div>
                     <h2 style={{ fontSize: '1.5rem', marginBottom: '0.5rem', color: 'var(--color-text-primary)' }}>Your cart is empty</h2>
-                    <p style={{ marginBottom: '2rem', color: 'var(--text-secondary)' }}>Looks like you haven't added any mangoes yet.</p>
+                    <p style={{ marginBottom: '2rem', color: 'var(--text-secondary)' }}>Looks like you haven&apos;t added any mangoes yet.</p>
                     <Link href="/shop">
                         <Button size="lg">Start Shopping</Button>
                     </Link>

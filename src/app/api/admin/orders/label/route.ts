@@ -1,14 +1,15 @@
-import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY!;
-const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+import { NextRequest, NextResponse } from 'next/server';
+import { verifyAdmin, unauthorizedResponse } from '@/lib/adminAuth';
 
 const DELHIVERY_API_KEY = process.env.DELHIVERY_API_KEY;
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
     try {
+        const { authenticated, token } = await verifyAdmin(request);
+        if (!authenticated) {
+            return unauthorizedResponse();
+        }
+
         if (!DELHIVERY_API_KEY) {
             return NextResponse.json({ error: 'Delhivery API Key not configured' }, { status: 500 });
         }
@@ -49,13 +50,23 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'No PDF link returned from Delhivery' }, { status: 400 });
         }
 
-        const { error: dbUpdateError } = await supabaseAdmin
-            .from('orders')
-            .update({ label_url: slipHtmlOrPdf })
-            .eq('id', orderId);
+        const updateRes = await fetch(`http://127.0.0.1/SFM/backend/api/orders.php`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`,
+                'X-SFM-Token': token || ''
+            },
+            body: JSON.stringify({
+                ids: [orderId],
+                label_url: slipHtmlOrPdf
+            })
+        });
 
-        if (dbUpdateError) {
-            return NextResponse.json({ error: 'Label generated but failed to save URL in database', slipHtmlOrPdf }, { status: 500 });
+        const updateData = await updateRes.json();
+
+        if (!updateRes.ok) {
+            return NextResponse.json({ error: 'Label generated but failed to save URL in database: ' + updateData.error, slipHtmlOrPdf }, { status: 500 });
         }
 
         return NextResponse.json({

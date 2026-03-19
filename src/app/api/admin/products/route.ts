@@ -1,41 +1,135 @@
-import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { NextRequest, NextResponse } from 'next/server';
+import { verifyAdmin, unauthorizedResponse } from '@/lib/adminAuth';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY!;
+export const dynamic = 'force-dynamic';
 
-const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
-
-export async function POST(request: Request) {
+export async function GET(request: NextRequest) {
     try {
+        const { authenticated, token } = await verifyAdmin(request);
+        if (!authenticated) {
+            return unauthorizedResponse();
+        }
+
+        const { searchParams } = new URL(request.url);
+        const res = await fetch(`http://127.0.0.1/SFM/backend/api/products.php?${searchParams.toString()}`, {
+            cache: 'no-store',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'X-SFM-Token': token || ''
+            }
+        });
+
+        const data = await res.json();
+        return NextResponse.json(data);
+    } catch (error: any) {
+        console.error('Error fetching products:', error);
+        return NextResponse.json({ error: 'Failed to fetch products' }, { status: 500 });
+    }
+}
+
+export async function POST(request: NextRequest) {
+    try {
+        const { authenticated, token } = await verifyAdmin(request);
+        if (!authenticated) {
+            return unauthorizedResponse();
+        }
+
         const body = await request.json();
 
-        const { data, error } = await supabaseAdmin
-            .from('products')
-            .insert({
-                name: body.name,
-                description: body.description,
-                price: body.price,
-                stock: body.stock,
-                category_id: body.category_id,
-                size: body.size,
-                is_featured: body.is_featured || false,
-                season_over: body.season_over || false,
-                original_price: body.original_price, // Added Regular Price
-                images: body.images || [],
-                highlights: body.highlights || [],
-                specifications: body.specifications || []
-            })
-            .select()
-            .single();
+        // Proxy to PHP backend
+        const res = await fetch('http://127.0.0.1/SFM/backend/api/products.php', {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`,
+                'X-SFM-Token': token || ''
+            },
+            body: JSON.stringify(body)
+        });
 
-        if (error) throw error;
+        const data = await res.json();
+
+        if (!res.ok) {
+            return NextResponse.json({ error: data.error || 'Failed to create product' }, { status: res.status });
+        }
 
         return NextResponse.json(data);
     } catch (error: any) {
         console.error('Error creating product:', error);
         return NextResponse.json(
             { error: error.message || 'Failed to create product' },
+            { status: 500 }
+        );
+    }
+}
+
+export async function DELETE(request: NextRequest) {
+    try {
+        const { authenticated, token } = await verifyAdmin(request);
+        if (!authenticated) {
+            return unauthorizedResponse();
+        }
+
+        const body = await request.json();
+
+        // Proxy to PHP backend
+        const res = await fetch('http://127.0.0.1/SFM/backend/api/products.php', {
+            method: 'DELETE',
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`,
+                'X-SFM-Token': token || ''
+            },
+            body: JSON.stringify(body)
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+            return NextResponse.json({ error: data.error || 'Failed to delete products' }, { status: res.status });
+        }
+
+        return NextResponse.json(data);
+    } catch (error: any) {
+        console.error('Error deleting products:', error);
+        return NextResponse.json(
+            { error: error.message || 'Failed to delete products' },
+            { status: 500 }
+        );
+    }
+}
+
+export async function PATCH(request: NextRequest) {
+    try {
+        const { authenticated, token } = await verifyAdmin(request);
+        if (!authenticated) {
+            return unauthorizedResponse();
+        }
+
+        const body = await request.json();
+
+        // Proxy to PHP backend (uses PUT/PATCH logic internally)
+        const res = await fetch('http://127.0.0.1/SFM/backend/api/products.php', {
+            method: 'PATCH',
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`,
+                'X-SFM-Token': token || ''
+            },
+            body: JSON.stringify(body)
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+            return NextResponse.json({ error: data.error || 'Failed to update products' }, { status: res.status });
+        }
+
+        return NextResponse.json(data);
+    } catch (error: any) {
+        console.error('Error updating products:', error);
+        return NextResponse.json(
+            { error: error.message || 'Failed to update products' },
             { status: 500 }
         );
     }

@@ -1,42 +1,47 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 
-const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+
 
 export async function POST(request: NextRequest) {
     try {
-        const { identifier, password } = await request.json();
+        const body = await request.json();
 
-        if (!identifier || !password) {
-            return NextResponse.json({ error: 'Missing identifier or password' }, { status: 400 });
+        // Forward to PHP backend
+        const response = await fetch('http://127.0.0.1/SFM/backend/auth/login.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            return NextResponse.json({ error: data.error || 'Invalid credentials' }, { status: response.status });
         }
 
-        // Determine if it's email or phone
-        const isPhone = /^[6-9][0-9]{9}$/.test(identifier);
-
-        // For phone users, convert to the dummy email format
-        const credentials = isPhone
-            ? { email: `${identifier}@phone.salemfarmmango.local`, password }
-            : { email: identifier, password };
-
-        const { data, error } = await supabase.auth.signInWithPassword(credentials);
-
-        if (error) {
-            return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
-        }
-
-        return NextResponse.json({
+        const res = NextResponse.json({
             success: true,
-            session: data.session,
             user: data.user,
             message: 'Login successful'
         });
 
+        // Store JWT token securely in HTTPOnly cookie
+        if (data.session?.access_token) {
+            res.cookies.set({
+                name: 'sfm_token',
+                value: data.session.access_token,
+                httpOnly: true,
+                secure: process.env.NODE_ENV === 'production',
+                sameSite: 'lax',
+                path: '/',
+                maxAge: 7 * 24 * 60 * 60 // 1 week
+            });
+        }
+
+        return res;
+
     } catch (error) {
-        console.error('Login error:', error);
+        console.error('Login proxy error:', error);
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }

@@ -29,6 +29,16 @@ export const CartSidebar = () => {
 
     const subtotal = items.reduce((acc, item) => acc + item.price * item.quantity, 0);
 
+    const formatWeight = (name: string, weight?: string) => {
+        if (!weight) return null;
+        const normalizedName = name.toLowerCase();
+        const normalizedWeight = weight.toLowerCase().trim();
+        if (normalizedName.includes(`(${normalizedWeight})`) || normalizedName.includes(`${normalizedWeight}`)) {
+            return null;
+        }
+        return weight;
+    };
+
     return (
         <>
             {/* Backdrop */}
@@ -104,7 +114,7 @@ export const CartSidebar = () => {
                     ) : (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                             {items.map((item) => (
-                                <div key={item.id} style={{ display: 'flex', gap: '1rem' }}>
+                                <div key={item.cartItemId} style={{ display: 'flex', gap: '1rem' }}>
                                     {/* Item Image */}
                                     <div style={{ width: '80px', height: '80px', background: 'var(--color-gray-100)', borderRadius: '0.5rem', flexShrink: 0, overflow: 'hidden' }}>
                                         {item.image ? (
@@ -119,9 +129,14 @@ export const CartSidebar = () => {
                                     {/* Item Info */}
                                     <div style={{ flex: 1 }}>
                                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
-                                            <h3 style={{ fontSize: '0.95rem', fontWeight: '600', margin: 0 }}>{item.name}</h3>
+                                            <h3 style={{ fontSize: '0.95rem', fontWeight: '600', margin: 0, paddingRight: '0.5rem' }}>
+                                                {item.name}
+                                                <span style={{ fontWeight: 'normal', color: 'var(--text-secondary)', marginLeft: '4px' }}>
+                                                    {formatWeight(item.name, item.weight) ? `(${item.weight})` : ''}
+                                                </span>
+                                            </h3>
                                             <button
-                                                onClick={() => removeFromCart(item.id)}
+                                                onClick={() => removeFromCart(item.cartItemId)}
                                                 style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '4px' }}
                                             >
                                                 <X size={16} />
@@ -135,7 +150,7 @@ export const CartSidebar = () => {
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginTop: '0.5rem' }}>
                                             <div style={{ display: 'flex', alignItems: 'center', border: '1px solid var(--border-light)', borderRadius: '4px' }}>
                                                 <button
-                                                    onClick={() => decrementItem(item.id)}
+                                                    onClick={() => decrementItem(item.cartItemId)}
                                                     style={{ background: 'none', border: 'none', padding: '4px 8px', cursor: 'pointer' }}
                                                 >
                                                     <Minus size={14} />

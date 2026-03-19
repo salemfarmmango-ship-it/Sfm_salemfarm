@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Star, ThumbsUp, User, X, CheckCircle } from 'lucide-react';
 import { formatDate } from '@/lib/dateUtils';
-import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/Button';
 
 // Types
@@ -21,44 +21,23 @@ export const ReviewSection = ({ productId }: { productId: number }) => {
     const [loading, setLoading] = useState(true);
     const [rating, setRating] = useState(5);
     const [comment, setComment] = useState('');
-    const [user, setUser] = useState<any>(null);
-    const [userProfile, setUserProfile] = useState<any>(null);
+    const { user } = useAuth();
     const [showSuccessModal, setShowSuccessModal] = useState(false);
     const [submitting, setSubmitting] = useState(false);
     const [visibleCount, setVisibleCount] = useState(REVIEWS_PER_PAGE);
 
-    // Fetch Reviews & User
+    // Fetch Reviews
     useEffect(() => {
         const fetchData = async () => {
             setLoading(true);
-
-            // Get User and Profile
-            const { data: { user } } = await supabase.auth.getUser();
-            setUser(user);
-
-            if (user) {
-                const { data: profile } = await supabase
-                    .from('profiles')
-                    .select('full_name')
-                    .eq('id', user.id)
-                    .single();
-                setUserProfile(profile);
-            }
-
-            // Get Reviews (only approved ones)
-            const { data, error } = await supabase
-                .from('reviews')
-                .select('id, rating, comment, created_at, reviewer_name')
-                .eq('product_id', productId)
-                .eq('is_approved', true)
-                .order('created_at', { ascending: false });
-
-            if (data && data.length > 0) {
-                setReviews(data as any);
-            } else if (error) {
+            try {
+                const res = await fetch(`/api/reviews?product_id=${productId}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    setReviews(Array.isArray(data) ? data : []);
+                }
+            } catch (error) {
                 console.error('Error fetching reviews:', error);
-                setReviews([]);
-            } else {
                 setReviews([]);
             }
             setLoading(false);
@@ -74,25 +53,32 @@ export const ReviewSection = ({ productId }: { productId: number }) => {
         }
 
         setSubmitting(true);
-        const { error } = await supabase.from('reviews').insert({
-            product_id: productId,
-            user_id: user.id,
-            reviewer_name: userProfile?.full_name || user.user_metadata?.full_name || 'Anonymous',
-            rating,
-            comment,
-            is_approved: false
-        });
+        try {
+            const res = await fetch('/api/reviews', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    product_id: productId,
+                    reviewer_name: user.user_metadata?.full_name || 'Anonymous',
+                    rating,
+                    comment
+                })
+            });
 
-        setSubmitting(false);
-
-        if (error) {
-            alert('Error submitting review: ' + (error.message || 'Please try again.'));
-            console.error(error);
-        } else {
-            setShowSuccessModal(true);
-            setComment('');
-            setRating(5);
+            if (res.ok) {
+                setShowSuccessModal(true);
+                setComment('');
+                setRating(5);
+            } else {
+                const data = await res.json();
+                alert('Error submitting review: ' + (data.error || 'Please try again.'));
+            }
+        } catch (error: any) {
+            alert('Error submitting review: ' + error.message);
         }
+        setSubmitting(false);
     };
 
     const visibleReviews = reviews.slice(0, visibleCount);

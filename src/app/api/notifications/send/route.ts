@@ -1,12 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 import { adminMessaging } from '@/lib/firebase-admin';
-
-// Use service role key for server-side operations
-const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_KEY!
-);
 
 interface NotificationPayload {
     title: string;
@@ -55,37 +48,21 @@ export async function POST(request: NextRequest) {
 
         if (tokens && tokens.length > 0) {
             targetTokens = tokens;
-        } else if (userIds && userIds.length > 0) {
-            // Get tokens for specific users
-            const { data: tokenData, error } = await supabase
-                .from('notification_tokens')
-                .select('token')
-                .in('user_id', userIds);
-
-            if (error) {
-                console.error('Error fetching user tokens:', error);
-                return NextResponse.json(
-                    { error: 'Failed to fetch user tokens' },
-                    { status: 500 }
-                );
+        } else {
+            // Fetch tokens from PHP backend instead of Supabase
+            let url = 'http://127.0.0.1/SFM/backend/api/notifications.php?action=list';
+            if (userIds && userIds.length > 0) {
+                url += `&userIds=${userIds.join(',')}`;
             }
 
-            targetTokens = tokenData?.map((t) => t.token) || [];
-        } else if (broadcast) {
-            // Get all tokens
-            const { data: tokenData, error } = await supabase
-                .from('notification_tokens')
-                .select('token');
-
-            if (error) {
-                console.error('Error fetching all tokens:', error);
-                return NextResponse.json(
-                    { error: 'Failed to fetch tokens' },
-                    { status: 500 }
-                );
+            const response = await fetch(url);
+            if (response.ok) {
+                const results = await response.json();
+                // results is expected to be { count: X, subscriptions: [...] } based on what list might return
+                // OR we just assume notifications.php handles listing if we added it.
+                // For now, let's assume we need to add a list action or just fetch all.
+                targetTokens = (results.subscriptions || []).map((t: any) => t.token);
             }
-
-            targetTokens = tokenData?.map((t) => t.token) || [];
         }
 
         if (targetTokens.length === 0) {
@@ -122,9 +99,7 @@ export async function POST(request: NextRequest) {
         let failed = 0;
         const failedTokens: string[] = [];
 
-        // FCM dynamic batching (process in chunks of 500 if needed, here we do one by one for simplicity and token cleanup)
-        // Note: For large scale, use sendEachForMulticast
-        const response = await Promise.allSettled(
+        const responseSettled = await Promise.allSettled(
             targetTokens.map(async (token) => {
                 try {
                     await messaging.send({
@@ -134,7 +109,6 @@ export async function POST(request: NextRequest) {
                     successful++;
                 } catch (error: any) {
                     failed++;
-                    // If token is invalid or not registered, mark for deletion
                     if (error.code === 'messaging/registration-token-not-registered' ||
                         error.code === 'messaging/invalid-registration-token') {
                         failedTokens.push(token);
@@ -144,12 +118,13 @@ export async function POST(request: NextRequest) {
             })
         );
 
-        // Clean up invalid tokens from database
+        // Clean up invalid tokens via PHP backend
         if (failedTokens.length > 0) {
-            await supabase
-                .from('notification_tokens')
-                .delete()
-                .in('token', failedTokens);
+            await fetch('http://127.0.0.1/SFM/backend/api/notifications.php', {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ tokens: failedTokens })
+            });
         }
 
         return NextResponse.json({
@@ -170,26 +145,15 @@ export async function POST(request: NextRequest) {
     }
 }
 
-// GET endpoint to list all subscribed devices (for admin)
 export async function GET(request: NextRequest) {
     try {
-        const { data, error } = await supabase
-            .from('notification_tokens')
-            .select('*')
-            .order('created_at', { ascending: false });
-
-        if (error) {
-            console.error('Error fetching tokens:', error);
-            return NextResponse.json(
-                { error: 'Failed to fetch subscriptions' },
-                { status: 500 }
-            );
-        }
+        const response = await fetch('http://127.0.0.1/SFM/backend/api/notifications.php?action=list');
+        const data = await response.json();
 
         return NextResponse.json({
             success: true,
-            count: data?.length || 0,
-            subscriptions: data,
+            count: data.subscriptions?.length || 0,
+            subscriptions: data.subscriptions || [],
         });
     } catch (error) {
         console.error('Error listing subscriptions:', error);

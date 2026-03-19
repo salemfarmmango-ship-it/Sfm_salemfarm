@@ -1,20 +1,19 @@
 'use client';
 
 import React, { useState } from 'react';
-import { supabase } from '@/lib/supabase';
 import { ProductCard, ProductCardProps } from '@/components/common/ProductCard';
 
 interface ProductGridProps {
     initialProducts: ProductCardProps[];
 }
 
-const ITEMS_PER_PAGE = 8;
+const ITEMS_PER_PAGE = 12;
 
 export const ProductGrid: React.FC<ProductGridProps> = ({ initialProducts }) => {
     const [products, setProducts] = useState<ProductCardProps[]>(initialProducts);
     const [loading, setLoading] = useState(false);
     const [hasMore, setHasMore] = useState(initialProducts.length >= ITEMS_PER_PAGE);
-    const [offset, setOffset] = useState(ITEMS_PER_PAGE);
+    const [offset, setOffset] = useState(initialProducts.length);
 
     // Helper to map DB to UI
     const mapProduct = (p: any): ProductCardProps => ({
@@ -28,24 +27,23 @@ export const ProductGrid: React.FC<ProductGridProps> = ({ initialProducts }) => 
         rating: p.avg_rating || 0,
         reviews: p.review_count || 0,
         badge: p.is_featured ? 'Best Seller' : (p.id % 2 === 0 ? 'Fresh' : 'Organic'),
-        badgeColor: p.is_featured ? '#ef4444' : '#10b981'
+        badgeColor: p.is_featured ? '#ef4444' : '#10b981',
+        variations: p.variations || []
     });
 
     const loadMore = async () => {
         setLoading(true);
-        const { data, error } = await supabase
-            .from('products')
-            .select('*, categories(name)')
-            .gt('stock', 0)
-            .eq('season_over', false)
-            .order('created_at', { ascending: false })
-            .range(offset, offset + ITEMS_PER_PAGE - 1);
-
-        if (!error && data) {
-            const mapped = data.map(mapProduct);
-            setProducts([...products, ...mapped]);
-            setHasMore(data.length === ITEMS_PER_PAGE);
-            setOffset(offset + ITEMS_PER_PAGE);
+        try {
+            const res = await fetch(`/api/products?limit=${ITEMS_PER_PAGE}&offset=${offset}`);
+            if (res.ok) {
+                const data = await res.json();
+                const mapped = data.map(mapProduct);
+                setProducts([...products, ...mapped]);
+                setHasMore(data.length === ITEMS_PER_PAGE);
+                setOffset(offset + ITEMS_PER_PAGE);
+            }
+        } catch (e) {
+            console.error("Failed to load more products", e);
         }
         setLoading(false);
     };

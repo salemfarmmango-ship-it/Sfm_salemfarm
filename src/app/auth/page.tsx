@@ -1,24 +1,25 @@
 'use client';
-import React, { useState, useEffect } from 'react';
-import { createClient } from '@supabase/supabase-js';
+import React, { useState, useEffect, useCallback } from 'react';
 import { OTPInput } from '@/components/auth/OTPInput';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '@/context/AuthContext';
 import { Eye, EyeOff, Phone, Mail } from 'lucide-react';
+import Script from 'next/script';
 
-const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+
 
 type AuthMode = 'login' | 'signup' | 'reset';
 type AuthMethod = 'phone' | 'email';
+type LoginStep = 'input';
 type SignupStep = 'input' | 'otp' | 'password';
 type ResetStep = 'input' | 'otp' | 'newpassword';
 
 export default function AuthPage() {
     const router = useRouter();
+    const { refreshUser } = useAuth();
     const [mode, setMode] = useState<AuthMode>('login');
     const [method, setMethod] = useState<AuthMethod>('phone');
+    const [loginStep, setLoginStep] = useState<LoginStep>('input');
     const [signupStep, setSignupStep] = useState<SignupStep>('input');
     const [resetStep, setResetStep] = useState<ResetStep>('input');
 
@@ -39,6 +40,46 @@ export default function AuthPage() {
         }
     }, [resendTimer]);
 
+    const handleGoogleResponse = useCallback(async (response: any) => {
+        setLoading(true);
+        setError('');
+        try {
+            const res = await fetch('/api/auth/google', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ credential: response.credential })
+            });
+
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Google login failed');
+
+            setSuccess('Login successful!');
+            await refreshUser();
+            setTimeout(() => router.push('/account'), 1000);
+        } catch (err: any) {
+            setError(err.message);
+        } finally {
+            setLoading(false);
+        }
+    }, [refreshUser, router]);
+
+    useEffect(() => {
+        /* global google */
+        if (typeof window !== 'undefined' && (window as any).google) {
+            (window as any).google.accounts.id.initialize({
+                client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID,
+                callback: handleGoogleResponse
+            });
+            const btn = document.getElementById('google-signin-button');
+            if (btn) {
+                (window as any).google.accounts.id.renderButton(
+                    btn,
+                    { theme: 'outline', size: 'large', width: '100%' }
+                );
+            }
+        }
+    }, [mode, handleGoogleResponse]);
+
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
@@ -54,11 +95,8 @@ export default function AuthPage() {
             const data = await response.json();
             if (!response.ok) throw new Error(data.error);
 
-            if (data.session) {
-                await supabase.auth.setSession(data.session);
-            }
-
             setSuccess('Login successful!');
+            await refreshUser();
             setTimeout(() => router.push('/account'), 1000);
         } catch (err: any) {
             setError(err.message);
@@ -73,7 +111,7 @@ export default function AuthPage() {
         setLoading(true);
 
         try {
-            const purpose = mode === 'signup' ? 'signup' : 'reset';
+            const purpose = mode === 'signup' ? 'signup' : (mode === 'reset' ? 'reset' : 'login');
             const response = await fetch('/api/auth/send-otp', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -85,7 +123,7 @@ export default function AuthPage() {
 
             setSuccess('OTP sent!');
             if (mode === 'signup') setSignupStep('otp');
-            else setResetStep('otp');
+            else if (mode === 'reset') setResetStep('otp');
             setResendTimer(45);
         } catch (err: any) {
             setError(err.message);
@@ -99,7 +137,8 @@ export default function AuthPage() {
         setLoading(true);
 
         try {
-            const purpose = mode === 'signup' ? 'signup' : 'reset';
+            const purpose = mode === 'signup' ? 'signup' : (mode === 'reset' ? 'reset' : 'login');
+            setSuccess(''); // Clear previous success (like "OTP sent")
             const response = await fetch('/api/auth/verify-otp', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -111,12 +150,37 @@ export default function AuthPage() {
 
             setVerificationToken(data.verificationToken);
             setSuccess('OTP verified!');
-            if (mode === 'signup') setSignupStep('password');
-            else setResetStep('newpassword');
+            
+            if (mode === 'signup') {
+                setSignupStep('password');
+            } else if (mode === 'reset') {
+                setResetStep('newpassword');
+            } else if (mode === 'login') {
+                handleLoginOTP(data.verificationToken);
+            }
         } catch (err: any) {
             setError(err.message);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleLoginOTP = async (token: string) => {
+        try {
+            const response = await fetch('/api/auth/login-otp', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ identifier, verificationToken: token, type: method })
+            });
+
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.error);
+
+            setSuccess('Login successful!');
+            setTimeout(() => router.push('/account'), 1000);
+        } catch (err: any) {
+            setSuccess('');
+            setError(err.message);
         }
     };
 
@@ -176,14 +240,6 @@ export default function AuthPage() {
         }
     };
 
-    const handleGoogleSignIn = async () => {
-        const { error } = await supabase.auth.signInWithOAuth({
-            provider: 'google',
-            options: { redirectTo: `${window.location.origin}/account` }
-        });
-        if (error) setError('Google sign-in failed');
-    };
-
     return (
         <div className="container" style={{ padding: 'var(--space-16) var(--space-4)', maxWidth: '500px', margin: '0 auto' }}>
             <div className="card" style={{ padding: '2rem' }}>
@@ -191,19 +247,8 @@ export default function AuthPage() {
                     {mode === 'login' ? 'Welcome Back' : mode === 'signup' ? 'Create Account' : 'Reset Password'}
                 </h1>
 
-                {/* Google OAuth - Login or Signup Initial Step */}
-                {(mode === 'login' || (mode === 'signup' && signupStep === 'input')) && (
-                    <>
-                        <button onClick={handleGoogleSignIn} style={{ width: '100%', padding: '0.75rem', marginBottom: '1.5rem', border: '1px solid var(--border-light)', borderRadius: '0.5rem', background: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '1rem', fontWeight: '500' }}>
-                            <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z" /><path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332C2.438 15.983 5.482 18 9 18z" /><path fill="#FBBC05" d="M3.964 10.71c-.18-.54-.282-1.117-.282-1.71s.102-1.17.282-1.71V4.958H.957C.347 6.173 0 7.548 0 9s.348 2.827.957 4.042l3.007-2.332z" /><path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0 5.482 0 2.438 2.017.957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z" /></svg>
-                            Continue with Google
-                        </button>
-                        <div style={{ textAlign: 'center', margin: '1rem 0', color: 'var(--text-secondary)' }}>OR</div>
-                    </>
-                )}
-
                 {/* Phone/Email Toggle */}
-                {(mode === 'login' || signupStep === 'input' || resetStep === 'input') && (
+                {((mode === 'login' && loginStep === 'input') || signupStep === 'input' || resetStep === 'input') && (
                     <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem' }}>
                         <button onClick={() => { setMethod('phone'); setIdentifier(''); }} style={{ flex: 1, padding: '0.5rem', border: '1px solid var(--border-light)', borderRadius: '0.5rem', background: method === 'phone' ? 'var(--color-green-600)' : 'white', color: method === 'phone' ? 'white' : 'inherit', cursor: 'pointer', fontWeight: '500' }}>Phone</button>
                         <button onClick={() => { setMethod('email'); setIdentifier(''); }} style={{ flex: 1, padding: '0.5rem', border: '1px solid var(--border-light)', borderRadius: '0.5rem', background: method === 'email' ? 'var(--color-green-600)' : 'white', color: method === 'email' ? 'white' : 'inherit', cursor: 'pointer', fontWeight: '500' }}>Email</button>
@@ -212,56 +257,69 @@ export default function AuthPage() {
 
                 {/* LOGIN FORM */}
                 {mode === 'login' && (
-                    <form onSubmit={handleLogin}>
-                        <div style={{ marginBottom: '1rem' }}>
-                            {/* Label hidden as per request */}
-                            {/* <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>{method === 'phone' ? 'Phone Number' : 'Email'}</label> */}
+                    <>
+                    {loginStep === 'input' && (
+                        <form onSubmit={handleLogin}>
+                            <div style={{ marginBottom: '1rem' }}>
+                                {/* Label hidden as per request */}
+                                {/* <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>{method === 'phone' ? 'Phone Number' : 'Email'}</label> */}
 
-                            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                                {method === 'phone' ? (
-                                    <>
-                                        <div style={{ padding: '0.75rem 1rem', border: '1px solid var(--border-light)', borderRadius: '0.5rem', background: 'var(--color-gray-100)', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                            <Phone size={18} style={{ color: 'var(--text-secondary)' }} />
-                                            <span>+91</span>
+                                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                                    {method === 'phone' ? (
+                                        <>
+                                            <div style={{ padding: '0.75rem 1rem', border: '1px solid var(--border-light)', borderRadius: '0.5rem', background: 'var(--color-gray-100)', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                <Phone size={18} style={{ color: 'var(--text-secondary)' }} />
+                                                <span>+91</span>
+                                            </div>
+                                            <input type="tel" value={identifier} onChange={e => setIdentifier(e.target.value)} placeholder="9876543210" required maxLength={10} style={{ flex: 1, padding: '0.75rem 1rem', border: '1px solid var(--border-light)', borderRadius: '0.5rem', fontSize: '1rem' }} />
+                                        </>
+                                    ) : (
+                                        <div style={{ position: 'relative', width: '100%' }}>
+                                            <Mail size={18} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
+                                            <input type="email" value={identifier} onChange={e => setIdentifier(e.target.value)} placeholder="you@example.com" required style={{ width: '100%', padding: '0.75rem 1rem 0.75rem 3rem', border: '1px solid var(--border-light)', borderRadius: '0.5rem', fontSize: '1rem' }} />
                                         </div>
-                                        <input type="tel" value={identifier} onChange={e => setIdentifier(e.target.value)} placeholder="9876543210" required maxLength={10} style={{ flex: 1, padding: '0.75rem 1rem', border: '1px solid var(--border-light)', borderRadius: '0.5rem', fontSize: '1rem' }} />
-                                    </>
-                                ) : (
-                                    <div style={{ position: 'relative', width: '100%' }}>
-                                        <Mail size={18} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
-                                        <input type="email" value={identifier} onChange={e => setIdentifier(e.target.value)} placeholder="you@example.com" required style={{ width: '100%', padding: '0.75rem 1rem 0.75rem 3rem', border: '1px solid var(--border-light)', borderRadius: '0.5rem', fontSize: '1rem' }} />
+                                    )}
+                                </div>
+                            </div>
+
+                                <div style={{ marginBottom: '1rem' }}>
+                                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>Password</label>
+                                    <div style={{ position: 'relative' }}>
+                                        <input type={showPassword ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)} required style={{ width: '100%', padding: '0.75rem 3rem 0.75rem 1rem', border: '1px solid var(--border-light)', borderRadius: '0.5rem', fontSize: '1rem' }} />
+                                        <button type="button" onClick={() => setShowPassword(!showPassword)} style={{ position: 'absolute', right: '1rem', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer' }}>
+                                            {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                                        </button>
                                     </div>
-                                )}
-                            </div>
-                        </div>
+                                </div>
 
-                        <div style={{ marginBottom: '1rem' }}>
-                            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>Password</label>
-                            <div style={{ position: 'relative' }}>
-                                <input type={showPassword ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)} required style={{ width: '100%', padding: '0.75rem 3rem 0.75rem 1rem', border: '1px solid var(--border-light)', borderRadius: '0.5rem', fontSize: '1rem' }} />
-                                <button type="button" onClick={() => setShowPassword(!showPassword)} style={{ position: 'absolute', right: '1rem', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer' }}>
-                                    {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-                                </button>
-                            </div>
-                        </div>
+                            {error && <div style={{ padding: '0.75rem', background: '#fee', color: '#c00', borderRadius: '0.5rem', marginBottom: '1rem', fontSize: '0.9rem' }}>{error}</div>}
+                            {success && <div style={{ padding: '0.75rem', background: '#efe', color: '#060', borderRadius: '0.5rem', marginBottom: '1rem', fontSize: '0.9rem' }}>{success}</div>}
 
-                        {error && <div style={{ padding: '0.75rem', background: '#fee', color: '#c00', borderRadius: '0.5rem', marginBottom: '1rem', fontSize: '0.9rem' }}>{error}</div>}
-                        {success && <div style={{ padding: '0.75rem', background: '#efe', color: '#060', borderRadius: '0.5rem', marginBottom: '1rem', fontSize: '0.9rem' }}>{success}</div>}
-
-                        <button type="submit" disabled={loading} style={{ width: '100%', padding: '0.75rem', background: 'var(--color-green-600)', color: 'white', border: 'none', borderRadius: '0.5rem', fontSize: '1rem', fontWeight: '600', cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.6 : 1 }}>
-                            {loading ? 'Logging in...' : 'Login'}
-                        </button>
-
-                        {/* Text Links */}
-                        <div style={{ marginTop: '1.5rem', textAlign: 'center', fontSize: '0.9rem' }}>
-                            <button type="button" onClick={() => { setMode('reset'); setResetStep('input'); setPassword(''); setError(''); setSuccess(''); }} style={{ background: 'none', border: 'none', color: 'var(--color-mango-600)', cursor: 'pointer', textDecoration: 'underline' }}>
-                                Forgot your password?
+                            <button type="submit" disabled={loading} style={{ width: '100%', padding: '0.75rem', background: 'var(--color-green-600)', color: 'white', border: 'none', borderRadius: '0.5rem', fontSize: '1rem', fontWeight: '600', cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.6 : 1, marginBottom: '1rem' }}>
+                                {loading ? 'Logging in...' : 'Login'}
                             </button>
-                            <div style={{ marginTop: '0.75rem', color: 'var(--text-secondary)' }}>
-                                Don't have an account? <button type="button" onClick={() => { setMode('signup'); setSignupStep('input'); setPassword(''); setError(''); setSuccess(''); }} style={{ background: 'none', border: 'none', color: 'var(--color-mango-600)', cursor: 'pointer', textDecoration: 'underline', fontWeight: '500' }}>Sign up</button>
+                            
+                            {/* Text Links */}
+                            <div style={{ marginTop: '1.5rem', textAlign: 'center', fontSize: '0.9rem' }}>
+                                <button type="button" onClick={() => { setMode('reset'); setResetStep('input'); setPassword(''); setError(''); setSuccess(''); }} style={{ background: 'none', border: 'none', color: 'var(--color-mango-600)', cursor: 'pointer', textDecoration: 'underline' }}>
+                                    Forgot your password?
+                                </button>
+                                <div style={{ marginTop: '0.75rem', color: 'var(--text-secondary)' }}>
+                                    Don&apos;t have an account? <button type="button" onClick={() => { setMode('signup'); setSignupStep('input'); setPassword(''); setError(''); setSuccess(''); }} style={{ background: 'none', border: 'none', color: 'var(--color-mango-600)', cursor: 'pointer', textDecoration: 'underline', fontWeight: '500' }}>Sign up</button>
+                                </div>
                             </div>
-                        </div>
-                    </form>
+
+                            <div style={{ margin: '1.5rem 0', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                                <div style={{ flex: 1, height: '1px', background: 'var(--border-light)' }}></div>
+                                <span style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>or</span>
+                                <div style={{ flex: 1, height: '1px', background: 'var(--border-light)' }}></div>
+                            </div>
+
+                            <div id="google-signin-button" style={{ width: '100%', marginBottom: '1.5rem' }}></div>
+                        </form>
+                    )}
+                    
+                    </>
                 )}
 
                 {/* SIGNUP FLOW */}
@@ -376,6 +434,26 @@ export default function AuthPage() {
                     </>
                 )}
             </div>
+            <Script 
+                src="https://accounts.google.com/gsi/client" 
+                strategy="afterInteractive" 
+                onLoad={() => {
+                    /* global google */
+                    if ((window as any).google) {
+                        (window as any).google.accounts.id.initialize({
+                            client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID,
+                            callback: handleGoogleResponse
+                        });
+                        const btn = document.getElementById('google-signin-button');
+                        if (btn) {
+                            (window as any).google.accounts.id.renderButton(
+                                btn,
+                                { theme: 'outline', size: 'large', width: '100%' }
+                            );
+                        }
+                    }
+                }}
+            />
         </div>
     );
 }

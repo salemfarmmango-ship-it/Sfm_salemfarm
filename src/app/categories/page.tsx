@@ -1,23 +1,26 @@
 
 import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
 
 // Force dynamic rendering to ensure fresh data
 export const dynamic = 'force-dynamic';
 
 export default async function CategoriesPage() {
-    // Fetch all categories from Supabase
-    const { data: categories, error } = await supabase
-        .from('categories')
-        .select('*')
-        .order('name', { ascending: true });
+    let displayCategories = [];
 
-    if (error) {
+    try {
+        const res = await fetch('http://localhost/SFM/backend/api/categories.php', {
+            next: { revalidate: 0 } // no-cache
+        });
+        
+        if (res.ok) {
+            displayCategories = await res.json();
+        } else {
+            console.error('Failed to fetch categories:', await res.text());
+        }
+    } catch (error) {
         console.error('Error fetching categories:', error);
     }
-
-    const displayCategories = categories || [];
 
     return (
         <div className="section-padding container">
@@ -32,7 +35,7 @@ export default async function CategoriesPage() {
                 </div>
             ) : (
                 <div className="categories-grid">
-                    {displayCategories.map((category, index) => (
+                    {displayCategories.map((category: any, index: number) => (
                         <Link href={`/shop?category=${encodeURIComponent(category.name)}`} key={category.id} className="category-card-wrapper" style={{ textDecoration: 'none', color: 'inherit' }}>
                             <div className="card card-hover" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
                                 <div style={{

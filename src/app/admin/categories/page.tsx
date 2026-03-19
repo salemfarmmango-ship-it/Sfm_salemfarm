@@ -1,7 +1,7 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/Button';
-import { supabase } from '@/lib/supabase';
+
 
 export default function AdminCategoriesPage() {
     const [categories, setCategories] = useState<any[]>([]);
@@ -40,7 +40,7 @@ export default function AdminCategoriesPage() {
                 ? `/api/admin/categories/${editingCategory.id}`
                 : '/api/admin/categories';
 
-            const method = editingCategory ? 'PATCH' : 'POST';
+            const method = editingCategory ? 'PUT' : 'POST';
 
             const response = await fetch(url, {
                 method,

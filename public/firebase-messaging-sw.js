@@ -11,10 +11,9 @@ self.addEventListener('activate', (event) => {
     return self.clients.claim();
 });
 
-// PWA requirement: A fetch event handler is required for installability
+// Basic fetch handler (removed pass-through that was causing network errors)
 self.addEventListener('fetch', (event) => {
-    // Basic pass-through fetch handler
-    event.respondWith(fetch(event.request));
+    // Let the browser handle standard fetch requests naturally
 });
 
 importScripts('https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js');

@@ -1,11 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-
-// Use service role key for server-side operations
-const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_KEY!
-);
 
 export async function POST(request: NextRequest) {
     try {
@@ -19,28 +12,19 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // Upsert the token (update if exists, insert if new)
-        const { data, error } = await supabase
-            .from('notification_tokens')
-            .upsert(
-                {
-                    token,
-                    user_id: userId || null,
-                    device_info: deviceInfo || {},
-                    updated_at: new Date().toISOString(),
-                },
-                {
-                    onConflict: 'token',
-                }
-            )
-            .select()
-            .single();
+        // Forward to PHP backend
+        const response = await fetch('http://127.0.0.1/SFM/backend/api/notifications.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token, deviceInfo, userId })
+        });
 
-        if (error) {
-            console.error('Error saving notification token:', error);
+        const data = await response.json();
+
+        if (!response.ok) {
             return NextResponse.json(
-                { error: 'Failed to save notification token' },
-                { status: 500 }
+                { error: data.error || 'Failed to save notification token' },
+                { status: response.status }
             );
         }
 
@@ -58,7 +42,6 @@ export async function POST(request: NextRequest) {
     }
 }
 
-// GET endpoint to check subscription status
 export async function GET(request: NextRequest) {
     try {
         const { searchParams } = new URL(request.url);
@@ -71,20 +54,14 @@ export async function GET(request: NextRequest) {
             );
         }
 
-        const { data, error } = await supabase
-            .from('notification_tokens')
-            .select('*')
-            .eq('token', token)
-            .single();
+        const response = await fetch(`http://127.0.0.1/SFM/backend/api/notifications.php?token=${token}`);
+        const data = await response.json();
 
-        if (error) {
+        if (!response.ok) {
             return NextResponse.json({ subscribed: false });
         }
 
-        return NextResponse.json({
-            subscribed: true,
-            data,
-        });
+        return NextResponse.json(data);
     } catch (error) {
         console.error('Error checking subscription:', error);
         return NextResponse.json(
@@ -94,7 +71,6 @@ export async function GET(request: NextRequest) {
     }
 }
 
-// DELETE endpoint to unsubscribe
 export async function DELETE(request: NextRequest) {
     try {
         const body = await request.json();
@@ -107,16 +83,18 @@ export async function DELETE(request: NextRequest) {
             );
         }
 
-        const { error } = await supabase
-            .from('notification_tokens')
-            .delete()
-            .eq('token', token);
+        const response = await fetch('http://127.0.0.1/SFM/backend/api/notifications.php', {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token })
+        });
 
-        if (error) {
-            console.error('Error deleting notification token:', error);
+        const data = await response.json();
+
+        if (!response.ok) {
             return NextResponse.json(
-                { error: 'Failed to unsubscribe' },
-                { status: 500 }
+                { error: data.error || 'Failed to unsubscribe' },
+                { status: response.status }
             );
         }
 

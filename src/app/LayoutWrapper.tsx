@@ -6,8 +6,9 @@ import { CartProvider } from '@/context/CartContext';
 import { BottomNav } from '@/components/common/BottomNav';
 import { CartSidebar } from '@/components/common/CartSidebar';
 import { NotificationPrompt } from '@/components/common/NotificationPrompt';
+import { AuthProvider } from '@/context/AuthContext';
 
-import { useEffect } from 'react';
+import { useEffect, Suspense } from 'react';
 
 export default function LayoutWrapper({
     children,
@@ -29,17 +30,21 @@ export default function LayoutWrapper({
     const isAdminRoute = pathname?.startsWith('/admin') || pathname === '/admin-login';
 
     return (
-        <CartProvider>
-            {!isAdminRoute && <Navbar />}
-            <div style={{ paddingBottom: isAdminRoute ? 0 : '80px' }}>
-                {children}
-                {!isAdminRoute && <Footer />}
-            </div>
-            {!isAdminRoute && <BottomNav />}
-            <CartSidebar />
-            {/* Push notification prompt - shows on non-admin pages */}
-            {!isAdminRoute && <NotificationPrompt />}
-        </CartProvider>
+        <AuthProvider>
+            <CartProvider>
+                {!isAdminRoute && <Navbar />}
+                <div style={{ paddingBottom: isAdminRoute ? 0 : '80px' }}>
+                    <Suspense fallback={<div style={{ display: 'flex', justifyContent: 'center', padding: '4rem' }}><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-700"></div></div>}>
+                        {children}
+                    </Suspense>
+                    {!isAdminRoute && <Footer />}
+                </div>
+                {!isAdminRoute && <BottomNav />}
+                <CartSidebar />
+                {/* Push notification prompt - shows on non-admin pages */}
+                {!isAdminRoute && <NotificationPrompt />}
+            </CartProvider>
+        </AuthProvider>
     );
 }
 

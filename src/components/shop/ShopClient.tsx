@@ -1,18 +1,19 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { ProductCardProps } from '@/components/common/ProductCard';
-import { ProductCard } from '@/components/common/ProductCard'; // Ensure correct import
+import { ProductCard } from '@/components/common/ProductCard';
 import PriceRangeSlider from './PriceRangeSlider';
-import { X, Filter, List, ChevronDown, ArrowUpDown } from 'lucide-react';
+import { X, Filter, List, ChevronDown } from 'lucide-react';
 
 interface ShopClientProps {
     products: ProductCardProps[];
     categories: string[];
     initialCategory?: string;
+    initialSort?: string;
 }
 
-export default function ShopClient({ products: initialProducts, categories, initialCategory }: ShopClientProps) {
+export default function ShopClient({ products: initialProducts, categories, initialCategory, initialSort }: ShopClientProps) {
     // Derived dynamic max price (rounded up to nearest 100)
     // Default to 1000 if empty or logic fails
     const maxProductPrice = Math.max(...(initialProducts.length ? initialProducts.map(p => p.price) : [1000]));
@@ -29,7 +30,8 @@ export default function ShopClient({ products: initialProducts, categories, init
     // Sync state if prop changes (e.g. navigation)
     useEffect(() => {
         setSelectedCategory(initialCategory || 'All');
-    }, [initialCategory]);
+        if (initialSort) setSortOption(initialSort);
+    }, [initialCategory, initialSort]);
 
     // Price Range State
     // activePriceRange drives the UI slider immediately (fast)
@@ -42,7 +44,29 @@ export default function ShopClient({ products: initialProducts, categories, init
         inStock: false,
         onBackorder: false
     });
-    const [sortOption, setSortOption] = useState('popular');
+    const [sortOption, setSortOption] = useState(initialSort || 'popular');
+    const [sortOpen, setSortOpen] = useState(false);
+    const sortRef = useRef<HTMLDivElement>(null);
+
+    const sortOptions = [
+        { value: 'popular', label: 'Sort by popularity' },
+        { value: 'rating', label: 'Average rating' },
+        { value: 'featured', label: 'Featured' },
+        { value: 'price-low-high', label: 'Price: Low → High' },
+        { value: 'price-high-low', label: 'Price: High → Low' },
+    ];
+    const currentSort = sortOptions.find(o => o.value === sortOption) || sortOptions[0];
+
+    // Close dropdown on outside click
+    useEffect(() => {
+        const handleClickOutside = (e: MouseEvent) => {
+            if (sortRef.current && !sortRef.current.contains(e.target as Node)) {
+                setSortOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
 
 
 
@@ -80,8 +104,12 @@ export default function ShopClient({ products: initialProducts, categories, init
             case 'price-high-low':
                 result.sort((a, b) => b.price - a.price);
                 break;
-            case 'newest':
-                result.sort((a, b) => b.id - a.id);
+            case 'featured':
+                result.sort((a, b) => {
+                    if (a.is_featured && !b.is_featured) return -1;
+                    if (!a.is_featured && b.is_featured) return 1;
+                    return b.id - a.id;
+                });
                 break;
             case 'rating':
                 result.sort((a, b) => (b.rating || 0) - (a.rating || 0));
@@ -202,28 +230,28 @@ export default function ShopClient({ products: initialProducts, categories, init
                         <List size={24} strokeWidth={1.5} />
                         <span style={{ fontSize: '0.9rem' }}>Filter</span>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', position: 'relative' }}>
-                        <select
-                            value={sortOption}
-                            onChange={(e) => setSortOption(e.target.value)}
-                            className="sort-dropdown"
-                            style={{
-                                padding: '0.4rem 1.8rem 0.4rem 0.5rem',
-                                fontSize: '0.85rem',
-                                border: 'none',
-                                background: 'transparent',
-                                fontWeight: '600',
-                                color: '#333',
-                                appearance: 'none'
-                            }}
+                    {/* Custom Sort Dropdown - Mobile */}
+                    <div ref={sortRef} style={{ position: 'relative' }}>
+                        <button
+                            onClick={() => setSortOpen(!sortOpen)}
+                            style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '0.4rem 0.75rem', border: '1.5px solid #e5e7eb', borderRadius: '8px', background: 'white', fontWeight: '600', fontSize: '0.85rem', color: '#333', cursor: 'pointer' }}
                         >
-                            <option value="popular">Popularity</option>
-                            <option value="rating">Rating</option>
-                            <option value="newest">Latest</option>
-                            <option value="price-low-high">Price: Low</option>
-                            <option value="price-high-low">Price: High</option>
-                        </select>
-                        <ChevronDown size={14} style={{ position: 'absolute', right: '0.25rem', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: '#666' }} />
+                            <span>{currentSort.label}</span>
+                            <ChevronDown size={14} style={{ transition: 'transform 0.2s', transform: sortOpen ? 'rotate(180deg)' : 'none' }} />
+                        </button>
+                        {sortOpen && (
+                            <div style={{ position: 'absolute', right: 0, top: 'calc(100% + 6px)', background: 'white', border: '1.5px solid #e5e7eb', borderRadius: '12px', boxShadow: '0 8px 24px rgba(0,0,0,0.12)', zIndex: 100, minWidth: '190px', overflow: 'hidden' }}>
+                                {sortOptions.map(opt => (
+                                    <button
+                                        key={opt.value}
+                                        onClick={() => { setSortOption(opt.value); setSortOpen(false); }}
+                                        style={{ width: '100%', textAlign: 'left', padding: '0.65rem 1rem', background: opt.value === sortOption ? '#f0fdf4' : 'white', border: 'none', cursor: 'pointer', fontSize: '0.875rem', fontWeight: opt.value === sortOption ? '600' : '400', color: opt.value === sortOption ? 'var(--color-green-700)' : '#374151', transition: 'background 0.15s' }}
+                                    >
+                                        {opt.label}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
                     </div>
                 </div>
 
@@ -278,20 +306,28 @@ export default function ShopClient({ products: initialProducts, categories, init
                         </div>
 
                         <div className="hidden-mobile" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                            <div style={{ position: 'relative' }}>
-                                <select
-                                    value={sortOption}
-                                    onChange={(e) => setSortOption(e.target.value)}
-                                    className="sort-dropdown"
-                                    style={{ padding: '0.4rem 2rem 0.4rem 0.8rem', fontSize: '0.85rem' }}
+                            {/* Same custom sort dropdown - Desktop */}
+                            <div style={{ position: 'relative' }} ref={sortRef}>
+                                <button
+                                    onClick={() => setSortOpen(!sortOpen)}
+                                    style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '0.5rem 1rem', border: '1.5px solid #e5e7eb', borderRadius: '10px', background: 'white', fontWeight: '600', fontSize: '0.875rem', color: '#333', cursor: 'pointer', boxShadow: '0 1px 4px rgba(0,0,0,0.05)' }}
                                 >
-                                    <option value="popular">Sort by popularity</option>
-                                    <option value="rating">Sort by average rating</option>
-                                    <option value="newest">Sort by latest</option>
-                                    <option value="price-low-high">Sort by price: low to high</option>
-                                    <option value="price-high-low">Sort by price: high to low</option>
-                                </select>
-                                <ChevronDown size={14} style={{ position: 'absolute', right: '0.8rem', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: '#888' }} />
+                                    <span>{currentSort.label}</span>
+                                    <ChevronDown size={14} style={{ transition: 'transform 0.2s', transform: sortOpen ? 'rotate(180deg)' : 'none', color: '#6b7280' }} />
+                                </button>
+                                {sortOpen && (
+                                    <div style={{ position: 'absolute', right: 0, top: 'calc(100% + 6px)', background: 'white', border: '1.5px solid #e5e7eb', borderRadius: '12px', boxShadow: '0 8px 24px rgba(0,0,0,0.12)', zIndex: 100, minWidth: '210px', overflow: 'hidden' }}>
+                                        {sortOptions.map(opt => (
+                                            <button
+                                                key={opt.value}
+                                                onClick={() => { setSortOption(opt.value); setSortOpen(false); }}
+                                                style={{ width: '100%', textAlign: 'left', padding: '0.7rem 1.1rem', background: opt.value === sortOption ? '#f0fdf4' : 'white', border: 'none', cursor: 'pointer', fontSize: '0.875rem', fontWeight: opt.value === sortOption ? '600' : '400', color: opt.value === sortOption ? 'var(--color-green-700)' : '#374151', transition: 'background 0.15s' }}
+                                            >
+                                                {opt.label}
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>

@@ -1,20 +1,21 @@
 import { NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
 
 // Delhivery API config
 const DELHIVERY_API_KEY = process.env.DELHIVERY_API_KEY;
 const ORIGIN_PINCODE = process.env.NEXT_PUBLIC_STORE_PINCODE || '636001';
 
-// Helper to extract weight in grams from size string (e.g., "1kg", "500g")
+// Helper to extract weight in grams from size string (e.g., "1kg", "500g", "3 Kg")
 const parseWeight = (size: string): number => {
     if (!size) return 1000; // default 1kg
     const lower = size.toLowerCase();
-    const match = lower.match(/(\d+\.?\d*)\s*(kg|g)/);
+    
+    // Match "1 kg", "1kg", "3.5kg", "500g", "500 g"
+    const match = lower.match(/(\d+\.?\d*)\s*(kg|g|litre|l)/);
     if (match) {
         const val = parseFloat(match[1]);
         const unit = match[2];
-        if (unit === 'kg') return val * 1000;
-        return val;
+        if (unit === 'kg' || unit === 'litre' || unit === 'l') return val * 1000;
+        return val; // grams
     }
     return 1000; // default
 };
@@ -28,39 +29,56 @@ export async function POST(request: Request) {
             return NextResponse.json({ fee: 150 });
         }
 
-        const isLocalState = (state || '').toLowerCase() === 'tamil nadu' ||
-            (state || '').toLowerCase() === 'tamilnadu' ||
-            (state || '').toLowerCase() === 'puducherry' ||
-            (state || '').toLowerCase() === 'pondicherry';
+        // Calculate total weight from cart items (using item.weight which is set in ProductActions)
+        let totalWeightGrams = 0;
+        if (items && Array.isArray(items)) {
+            items.forEach((item: any) => {
+                // ProductActions saves variation label/size into 'weight' property
+                const weightPerItem = parseWeight(item.weight);
+                totalWeightGrams += weightPerItem * (item.quantity || 1);
+            });
+        }
 
-        if (isLocalState) {
-            // Fetch from local Supabase rates
-            const { data } = await supabase.from('shipping_rates').select('*').eq('is_active', true).eq('state_name', state).single();
-            if (data) {
-                return NextResponse.json({ fee: data.charge, source: 'local' });
+        // Ensure at least 1kg if calculation fails
+        if (totalWeightGrams === 0) totalWeightGrams = 1000;
+        const totalWeightKg = totalWeightGrams / 1000;
+
+        const normalizedState = (state || '').toLowerCase().replace(/\s/g, '');
+        const isTN = normalizedState === 'tamilnadu';
+        const isPY = normalizedState === 'puducherry' || normalizedState === 'pondicherry' || normalizedState === 'puthuchery';
+
+        if (isTN || isPY) {
+            // Fetch from local PHP backend using canonical names
+            const queryState = isTN ? 'Tamil Nadu' : 'Puducherry';
+            try {
+                const res = await fetch(`http://127.0.0.1/SFM/backend/api/shipping_rates.php?state_name=${encodeURIComponent(queryState)}&is_active=1`, { cache: 'no-store' });
+                if (res.ok) {
+                    const dataArr = await res.json();
+                    const data = dataArr[0]; // Get first match
+
+                    if (data) {
+                        // Rule: Charge = Base Rate * Weight in Kg
+                        const baseCharge = parseFloat(data.charge);
+                        const finalFee = Math.ceil(baseCharge * totalWeightKg);
+                        return NextResponse.json({ 
+                            fee: finalFee, 
+                            source: 'local',
+                            weight: totalWeightKg,
+                            rate: baseCharge
+                        });
+                    }
+                }
+            } catch (e) {
+                console.error('Failed to fetch shipping rates from PHP:', e);
             }
-            // fallback
-            return NextResponse.json({ fee: 150, source: 'local_default' });
+            // fallback local default (weight-based)
+            return NextResponse.json({ fee: Math.ceil(50 * totalWeightKg), source: 'local_default' });
         } else {
             // Use Delhivery for other states
             if (!DELHIVERY_API_KEY) {
                 console.warn('Delhivery API key not found. Using default rate.');
-                return NextResponse.json({ fee: 200, source: 'delhivery_fallback_missing_key' });
+                return NextResponse.json({ fee: 200 * Math.ceil(totalWeightKg), source: 'delhivery_fallback_missing_key' });
             }
-
-            let totalWeightGrams = 0;
-            const productIds = items?.map((i: any) => i.id) || [];
-            if (productIds.length > 0) {
-                const { data: products } = await supabase.from('products').select('id, size').in('id', productIds);
-
-                items.forEach((item: any) => {
-                    const product = products?.find(p => p.id === item.id);
-                    const weight = parseWeight(product?.size);
-                    totalWeightGrams += weight * item.quantity;
-                });
-            }
-
-            if (totalWeightGrams === 0) totalWeightGrams = 1000;
 
             const md = 'S'; // Surface
             const o_pin = ORIGIN_PINCODE;
@@ -82,15 +100,20 @@ export async function POST(request: Request) {
 
                 if (data && data.length > 0 && data[0].total_amount) {
                     const fee = data[0].total_amount;
-                    return NextResponse.json({ fee: Math.ceil(fee), source: 'delhivery' });
+                    return NextResponse.json({ 
+                        fee: Math.ceil(fee), 
+                        source: 'delhivery',
+                        weight: totalWeightKg
+                    });
                 } else {
                     console.error('Delhivery pricing error:', data);
-                    return NextResponse.json({ fee: 200, source: 'delhivery_fallback_internal' });
+                    // Fallback to 200 per kg for national
+                    return NextResponse.json({ fee: 200 * Math.ceil(totalWeightKg), source: 'delhivery_fallback_internal' });
                 }
 
             } catch (err) {
                 console.error('Failed to fetch Delhivery price:', err);
-                return NextResponse.json({ fee: 200, source: 'delhivery_fallback_error' });
+                return NextResponse.json({ fee: 200 * Math.ceil(totalWeightKg), source: 'delhivery_fallback_error' });
             }
         }
 

@@ -1,6 +1,6 @@
 'use client';
 import React from 'react';
-import { Star, ShoppingCart, Plus, Loader2, Check } from 'lucide-react';
+import { Star, Plus, Minus, Trash2, Loader2, Check } from 'lucide-react';
 import { useState } from 'react';
 import { useCart } from '@/context/CartContext';
 import { Button } from '@/components/ui/Button';
@@ -16,35 +16,35 @@ export type ProductCardProps = {
     rating?: number;
     reviews?: number;
     weight?: string;
-    badge?: string; // 'Offer', 'Best Seller', 'New', etc.
-    badgeColor?: string; // e.g., 'red', 'orange', 'green'
-    outOfStock?: boolean; // Product is unavailable
+    badge?: string;
+    badgeColor?: string;
+    outOfStock?: boolean;
+    is_featured?: boolean;
+    variations?: { variation_label: string; price: number }[];  // from product_variations table
 };
 
 export const ProductCard = ({ product }: { product: ProductCardProps }) => {
-    const { addToCart } = useCart();
+    const { addToCart, decrementItem, removeFromCart, items } = useCart();
     const [isAdding, setIsAdding] = useState(false);
-    const [isAdded, setIsAdded] = useState(false);
     const [imageLoaded, setImageLoaded] = useState(false);
 
+    // Current quantity of this product in cart
+    const cartItemId = product.weight ? `${product.id}_${product.weight}` : String(product.id);
+    const cartItem = items.find(i => i.cartItemId === cartItemId);
+    const cartQty = cartItem?.quantity || 0;
+
     const handleAddToCart = (e: React.MouseEvent) => {
-        e.preventDefault(); // Prevent navigating if wrapped in Link
+        e.preventDefault();
+        addToCart(product, 1, false);
+    };
 
-        if (isAdding || isAdded) return;
-
-        setIsAdding(true);
-
-        // Simulate network/processing delay for better UX
-        setTimeout(() => {
-            addToCart(product, 1, false); // false = don't open sidebar
-            setIsAdding(false);
-            setIsAdded(true);
-
-            // Reset to default state after 2 seconds
-            setTimeout(() => {
-                setIsAdded(false);
-            }, 2000);
-        }, 600);
+    const handleDecrement = (e: React.MouseEvent) => {
+        e.preventDefault();
+        if (cartQty <= 1) {
+            removeFromCart(cartItemId);
+        } else {
+            decrementItem(cartItemId);
+        }
     };
 
     return (
@@ -137,8 +137,21 @@ export const ProductCard = ({ product }: { product: ProductCardProps }) => {
                 </Link>
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.25rem' }}>
-                    <div className="product-card-weight" style={{ marginBottom: 0 }}>
-                        {product.weight || '1kg'}
+                    <div className="product-card-weight" style={{ marginBottom: 0, fontSize: '0.78rem', color: '#6b7280', display: 'flex', flexWrap: 'wrap', gap: '0.2rem', alignItems: 'center' }}>
+                        {/* Show base weight as first chip, then all variation labels */}
+                        {product.weight && (
+                            <span style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '4px', padding: '1px 6px', color: '#15803d', fontWeight: '500' }}>
+                                {product.weight}
+                            </span>
+                        )}
+                        {product.variations && product.variations.length > 0 && product.variations.map((v, i) => (
+                            <span key={i} style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '4px', padding: '1px 6px', color: '#15803d', fontWeight: '500' }}>
+                                {v.variation_label}
+                            </span>
+                        ))}
+                        {(!product.weight && (!product.variations || product.variations.length === 0)) && (
+                            <span>1kg</span>
+                        )}
                     </div>
 
                     {/* Ratings */}
@@ -172,35 +185,51 @@ export const ProductCard = ({ product }: { product: ProductCardProps }) => {
                         )}
                     </div>
 
-                    <button
-                        onClick={handleAddToCart}
-                        suppressHydrationWarning
-                        disabled={product.outOfStock || isAdding || isAdded}
-                        className="product-card-btn"
-                        style={{
-                            opacity: product.outOfStock ? 0.7 : 1,
-                            cursor: (product.outOfStock || isAdding || isAdded) ? 'default' : 'pointer',
-                            background: isAdded ? 'var(--color-green-600)' : undefined, // Assuming default is defined in CSS, overriding if added
-                            color: isAdded ? 'white' : undefined,
-                            transition: 'all 0.3s ease',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            gap: '6px'
-                        }}
-                    >
-                        {isAdding ? (
-                            <Loader2 size={16} className="animate-spin" />
-                        ) : isAdded ? (
-                            <>
-                                <Check size={16} /> Added
-                            </>
-                        ) : (
-                            <>
-                                <Plus size={16} /> {product.outOfStock ? 'Unavailable' : 'Add'}
-                            </>
-                        )}
-                    </button>
+                    {/* Add to Cart / Quantity Controls */}
+                    {product.outOfStock ? (
+                        <button disabled className="product-card-btn" style={{ opacity: 0.5, cursor: 'default' }}>
+                            Unavailable
+                        </button>
+                    ) : cartQty > 0 ? (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0', border: '1.5px solid var(--color-green-600)', borderRadius: '8px', overflow: 'hidden', height: '36px' }}>
+                            <button
+                                onClick={handleDecrement}
+                                style={{ width: '34px', height: '100%', background: cartQty === 1 ? '#fee2e2' : 'white', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: cartQty === 1 ? '#ef4444' : 'var(--color-green-700)', fontWeight: 700, transition: 'background 0.2s' }}
+                            >
+                                {cartQty === 1 ? <Trash2 size={13} strokeWidth={2.5} /> : <Minus size={14} />}
+                            </button>
+                            <span style={{ minWidth: '28px', textAlign: 'center', fontWeight: '700', fontSize: '0.95rem', color: 'var(--color-green-700)' }}>
+                                {cartQty}
+                            </span>
+                            <button
+                                onClick={handleAddToCart}
+                                style={{ width: '34px', height: '100%', background: 'var(--color-green-600)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 700 }}
+                            >
+                                {isAdding ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
+                            </button>
+                        </div>
+                    ) : (
+                        <button
+                            onClick={handleAddToCart}
+                            suppressHydrationWarning
+                            disabled={isAdding}
+                            className="product-card-btn"
+                            style={{
+                                cursor: isAdding ? 'default' : 'pointer',
+                                transition: 'all 0.3s ease',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '6px'
+                            }}
+                        >
+                            {isAdding ? (
+                                <Loader2 size={16} className="animate-spin" />
+                            ) : (
+                                <><Plus size={16} /> Add</>
+                            )}
+                        </button>
+                    )}
                 </div>
             </div>
         </div>

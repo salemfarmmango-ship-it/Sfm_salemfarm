@@ -1,151 +1,162 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { ArrowRight } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
-import { ProductCard, ProductCardProps } from '@/components/common/ProductCard';
+import { ProductCardProps } from '@/components/common/ProductCard';
 import { HeroCarousel } from '@/components/home/HeroCarousel';
 import { ProductGrid } from '@/components/home/ProductGrid';
 import { TrustFeatures } from '@/components/home/TrustFeatures';
 import { ProductCarousel } from '@/components/home/ProductCarousel';
 import { PromoImageGrid } from '@/components/home/PromoImageGrid';
 import { CategoryGrid } from '@/components/home/CategoryGrid';
+import { BlogSection } from '@/components/home/BlogSection';
+import { OffersSection } from '@/components/home/OffersSection';
+import { InstagramSection } from '@/components/home/InstagramSection';
 
-// Helper to map DB to UI
-const mapProduct = (p: any, statsMap: Map<number, any>): ProductCardProps => {
-    const stats = statsMap.get(p.id) || { avg_rating: 0, review_count: 0 };
+const transformProduct = (p: any, categoryMap: Map<number, string>): ProductCardProps => {
+    const isSeasonOver = p.season_over && p.season_over != 0;
+    const hasStock = p.stock && p.stock > 0;
+    
+    let badge = undefined;
+    let badgeColor = '#ef4444';
+
+    if (isSeasonOver) {
+        badge = 'Season Over';
+        badgeColor = '#6b7280';
+    } else if (!hasStock) {
+        badge = 'Out of Stock';
+        badgeColor = '#dc2626';
+    } else if (p.is_featured == 1 || p.is_featured === true) {
+        badge = 'Featured';
+        badgeColor = '#f59e0b'; // Amber-500
+    }
+
+    // Images: PHP backend returns as array already (JSON decoded)
+    const images: string[] = Array.isArray(p.images) ? p.images : [];
+    let image = images.length > 0 ? images[0] : null;
+
+    // Fix relative image paths from backend
+    if (image && !image.startsWith('http') && !image.startsWith('data:')) {
+        image = `http://localhost/SFM/backend/${image.startsWith('/') ? image.substring(1) : image}`;
+    }
+
     return {
         id: p.id,
         name: p.name,
         price: p.price,
         originalPrice: p.original_price || undefined,
-        category: p.categories?.name || 'General',
-        image: p.images && p.images.length > 0 ? p.images[0] : null,
+        category: p.category_name || categoryMap.get(p.category_id) || 'General',
+        image: image || undefined,
         weight: p.size || '1kg',
-        rating: Number(stats.avg_rating) || 0,
-        reviews: Number(stats.review_count) || 0,
-        badge: p.is_featured ? 'Best Seller' : (p.id % 2 === 0 ? 'Fresh' : 'Organic'),
-        badgeColor: p.is_featured ? '#ef4444' : '#10b981'
+        rating: Number(p.avg_rating) || 0,
+        reviews: Number(p.review_count) || 0,
+        badge,
+        badgeColor,
+        outOfStock: !hasStock || isSeasonOver,
+        is_featured: p.is_featured == 1 || p.is_featured === true,
+        variations: Array.isArray(p.variations) ? p.variations : []
     };
 };
 
 export const dynamic = 'force-dynamic';
 
 export default async function Home() {
-    // Fetch review stats
-    const { data: reviewStats } = await supabase
-        .from('product_review_stats')
-        .select('*');
+    // 1. Fetch categories from MySQL Backend
+    let mysqlCategories: any[] = [];
+    try {
+        const res = await fetch('http://127.0.0.1/SFM/backend/api/categories.php', { cache: 'no-store' });
+        if (res.ok) mysqlCategories = await res.json();
+    } catch (e) { console.error('Error fetching categories from PHP', e); }
 
-    const statsMap = new Map(
-        (reviewStats || []).map((s: any) => [s.product_id, s])
-    );
+    const categoryMap = new Map();
+    mysqlCategories.forEach(c => categoryMap.set(c.id, c.name));
 
-    // Fetch Featured Products (available only)
-    let { data: dbFeatured } = await supabase
-        .from('products')
-        .select('*, categories(name)')
-        .gt('stock', 0)
-        .eq('season_over', false)
-        .eq('is_featured', true)
-        .limit(8);
+    // 2. Fetch Featured Products from PHP API
+    let featuredProducts: ProductCardProps[] = [];
+    try {
+        const res = await fetch('http://127.0.0.1/SFM/backend/api/products.php?is_featured=true', { cache: 'no-store' });
+        if (res.ok) {
+            const data = await res.json();
+            const dbFeatured = Array.isArray(data) ? data : [];
+            featuredProducts = dbFeatured.map(p => transformProduct(p, categoryMap));
+        }
+    } catch (e) { console.error('Error fetching featured products', e); }
 
-    // If no featured products, fetch fallback (any available products)
-    if (!dbFeatured || dbFeatured.length === 0) {
-        const { data: fallback } = await supabase
-            .from('products')
-            .select('*, categories(name)')
-            .gt('stock', 0)
-            .eq('season_over', false)
-            .order('created_at', { ascending: false })
-            .limit(4);
-        dbFeatured = fallback;
-    }
+    // 3. Fresh Arrivals
+    let recentProducts: ProductCardProps[] = [];
+    try {
+        const res = await fetch('http://127.0.0.1/SFM/backend/api/products.php?limit=12', { cache: 'no-store' });
+        if (res.ok) {
+            const data = await res.json();
+            const dbRecent = Array.isArray(data) ? data : [];
+            recentProducts = dbRecent.map(p => transformProduct(p, categoryMap));
+        }
+    } catch (e) { console.error('Error fetching recent products', e); }
 
-    const featuredProducts = dbFeatured ? dbFeatured.map(p => mapProduct(p, statsMap)) : [];
+    // 4. Fetch Published Blogs
+    let blogs: any[] = [];
+    try {
+        const res = await fetch('http://127.0.0.1/SFM/backend/api/blogs.php?status=published', { cache: 'no-store' });
+        if (res.ok) blogs = await res.json();
+    } catch (e) { console.error('Error fetching blogs for home', e); }
 
-    // Fresh Arrivals (available only) - Fetch 8 for initial load
-    const { data: dbRecent } = await supabase
-        .from('products')
-        .select('*, categories(name)')
-        .gt('stock', 0)
-        .eq('season_over', false)
-        .order('created_at', { ascending: false })
-        .limit(8);
+    // 5. Fetch Active Offers
+    let offers: any[] = [];
+    try {
+        const res = await fetch('http://127.0.0.1/SFM/backend/api/offers.php', { cache: 'no-store' });
+        if (res.ok) offers = await res.json();
+    } catch (e) { console.error('Error fetching offers for home', e); }
 
-    const recentProducts = dbRecent ? dbRecent.map(p => mapProduct(p, statsMap)) : [];
+    // 6. Fetch Public Settings (including Instagram posts)
+    let publicSettings: any = {};
+    try {
+        const res = await fetch('http://127.0.0.1/SFM/backend/api/public-settings.php', { cache: 'no-store' });
+        if (res.ok) {
+            const data = await res.json();
+            publicSettings = data.settings || {};
+        }
+    } catch (e) { console.error('Error fetching public settings', e); }
 
-    // Fetch All Categories for Featured Categories section
-    const { data: dbCategories } = await supabase
-        .from('categories')
-        .select('*')
-        .order('name', { ascending: true })
-        .limit(8);
-
-    const categories = dbCategories || [];
+    const categories = mysqlCategories.slice(0, 8);
+    const instagramPosts = publicSettings.instagram_posts ? publicSettings.instagram_posts.split(',').map((s: string) => s.trim()) : [];
 
     return (
         <main style={{ background: '#f8f9fa' }}>
-            {/* SEO Optimization: H1 Tag for Google Ranking */}
-            <h1 style={{
-                position: 'absolute',
-                width: '1px',
-                height: '1px',
-                padding: '0',
-                margin: '-1px',
-                overflow: 'hidden',
-                clip: 'rect(0, 0, 0, 0)',
-                whiteSpace: 'nowrap',
-                border: '0'
-            }}>
+            <h1 style={{ position: 'absolute', width: '1px', height: '1px', padding: '0', margin: '-1px', overflow: 'hidden', clip: 'rect(0, 0, 0, 0)', whiteSpace: 'nowrap', border: '0' }}>
                 Salem Farm Mango - Buy Authentic Salem Fresh Mangoes Online Directly from Farm
             </h1>
 
-            {/* Hero Carousel */}
             <HeroCarousel />
 
-            {/* Featured Products Carousel */}
             <ProductCarousel
                 title="Customer Favorites"
                 products={featuredProducts}
-                viewAllLink="/shop?category=Featured"
+                viewAllLink="/shop?sort=featured"
             />
 
-            {/* Trust Signals */}
             <TrustFeatures />
 
-            {/* Featured Categories - Modern Circular/Rounded Grid */}
             <section className="section-padding" style={{ background: 'white' }}>
                 <div className="container">
                     <div style={{ textAlign: 'center', marginBottom: 'var(--space-12)' }}>
-                        <h2 style={{
-                            fontSize: '2rem',
-                            color: 'var(--color-green-900)',
-                            marginBottom: '0.5rem'
-                        }}>Shop by Category</h2>
+                        <h2 style={{ fontSize: '2rem', color: 'var(--color-green-900)', marginBottom: '0.5rem' }}>Shop by Category</h2>
                         <p style={{ color: 'var(--text-secondary)' }}>Explore our wide range of fresh produce</p>
                     </div>
 
                     <CategoryGrid categories={categories} />
 
                     <div style={{ marginTop: 'var(--space-12)', textAlign: 'center' }}>
-                        <Link href="/shop" className="btn btn-primary" style={{
-                            padding: '0.8rem 2.5rem',
-                            borderRadius: '50px',
-                            boxShadow: '0 4px 12px rgba(230, 149, 0, 0.3)'
-                        }}>
+                        <Link href="/shop?sort=featured" className="btn btn-primary" style={{ padding: '0.8rem 2.5rem', borderRadius: '50px', boxShadow: '0 4px 12px rgba(230, 149, 0, 0.3)' }}>
                             View Full Catalog
                         </Link>
                     </div>
                 </div>
             </section>
 
-            {/* Fresh Arrivals Section */}
-            <section className="section-padding" style={{ background: '#f8f9fa', borderTop: '1px solid var(--border-light)' }}>
+            <section className="section-padding" style={{ background: '#f8fafc', borderTop: '1px solid var(--border-light)' }}>
                 <div className="container">
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-8)' }}>
                         <h2 style={{ fontSize: '2rem', color: 'var(--color-green-900)' }}>Fresh Arrivals</h2>
-                        <Link href="/shop?sort=newest" style={{ color: 'var(--color-green-700)', fontWeight: '600', fontSize: '0.9rem' }}>
+                        <Link href="/shop" style={{ color: 'var(--color-green-700)', fontWeight: '600', fontSize: '0.9rem' }}>
                             View All
                         </Link>
                     </div>
@@ -153,10 +164,11 @@ export default async function Home() {
                 </div>
             </section>
 
-            {/* 3-Panel Promo Image Grid - Moved to bottom above footer */}
-            <div style={{ margin: '2rem 0' }}>
-                <PromoImageGrid />
-            </div>
+            <BlogSection blogs={blogs} />
+
+            <OffersSection offers={offers} />
+
+            <InstagramSection postUrls={instagramPosts} />
         </main>
     );
 }

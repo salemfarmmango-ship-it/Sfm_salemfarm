@@ -1,19 +1,15 @@
-import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-import { cookies } from 'next/headers';
+import { NextRequest, NextResponse } from 'next/server';
+import { verifyAdmin, unauthorizedResponse } from '@/lib/adminAuth';
 
 export const dynamic = 'force-dynamic';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY!;
-
-const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
-
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
     try {
-        // Authenticate admin securely using route cookies
-        // But for time being, we'll just check if request is well-formed since 
-        // the admin panel already gatekeeps access.
+        const { authenticated, token } = await verifyAdmin(request);
+        if (!authenticated) {
+            return unauthorizedResponse();
+        }
+
         const body = await request.json();
         const { orderId, tracking_id, courier_partner } = body;
 
@@ -21,12 +17,23 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Order ID is required' }, { status: 400 });
         }
 
-        const { error } = await supabaseAdmin
-            .from('orders')
-            .update({ tracking_id, courier_partner })
-            .eq('id', orderId);
+        const updateRes = await fetch(`http://127.0.0.1/SFM/backend/api/orders.php`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`,
+                'X-SFM-Token': token || ''
+            },
+            body: JSON.stringify({
+                ids: [orderId],
+                tracking_id,
+                courier_partner
+            })
+        });
 
-        if (error) throw error;
+        const updateData = await updateRes.json();
+
+        if (!updateRes.ok) throw new Error(updateData.error || 'Failed to update tracking');
 
         return NextResponse.json({ success: true });
     } catch (error: any) {

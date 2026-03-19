@@ -85,6 +85,7 @@ export const Footer = () => {
                     <h4 style={{ fontSize: '1.1rem', marginBottom: 'var(--space-6)', color: 'var(--color-green-900)' }}>Quick Links</h4>
                     <ul style={{ listStyle: 'none', fontSize: '1rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                         <li><Link href="/shop" style={{ borderBottom: '1px solid transparent', transition: 'border-color 0.2s', color: 'inherit', textDecoration: 'none' }}>All Products</Link></li>
+                        <li><Link href="/blog" style={{ borderBottom: '1px solid transparent', transition: 'border-color 0.2s', color: 'inherit', textDecoration: 'none' }}>Our Blog</Link></li>
                         <li><Link href="/about" style={{ borderBottom: '1px solid transparent', transition: 'border-color 0.2s', color: 'inherit', textDecoration: 'none' }}>About Us</Link></li>
                         <li><Link href="/offers" style={{ borderBottom: '1px solid transparent', transition: 'border-color 0.2s', color: 'inherit', textDecoration: 'none' }}>Offers</Link></li>
                         <li><Link href="/faq" style={{ borderBottom: '1px solid transparent', transition: 'border-color 0.2s', color: 'inherit', textDecoration: 'none' }}>FAQs</Link></li>

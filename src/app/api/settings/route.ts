@@ -1,26 +1,20 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { NextResponse } from 'next/server';
 
-const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+export const dynamic = 'force-dynamic';
 
 export async function GET() {
     try {
-        const { data, error } = await supabase
-            .from('store_settings')
-            .select('*');
+        const res = await fetch('http://127.0.0.1/SFM/backend/api/public-settings.php', {
+            cache: 'no-store',
+        });
 
-        if (error) throw error;
+        const data = await res.json();
 
-        // Convert array to object
-        const settings = data.reduce((acc, curr) => {
-            acc[curr.key] = curr.value;
-            return acc;
-        }, {} as Record<string, any>);
+        if (!res.ok) {
+            return NextResponse.json({ error: data.error || 'Failed to load settings' }, { status: res.status });
+        }
 
-        return NextResponse.json({ settings });
+        return NextResponse.json(data);
 
     } catch (error: any) {
         return NextResponse.json({ error: error.message }, { status: 500 });

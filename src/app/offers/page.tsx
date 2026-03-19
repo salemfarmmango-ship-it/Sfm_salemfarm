@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
-import { supabase } from '@/lib/supabase';
+
 import { Copy, Check, Info } from 'lucide-react';
 
 interface Offer {
@@ -20,15 +20,13 @@ export default function OffersPage() {
 
     useEffect(() => {
         const fetchOffers = async () => {
-            const { data, error } = await supabase
-                .from('offers')
-                .select('*')
-                .eq('is_active', true)
-                .order('created_at', { ascending: false });
-
-            if (!error && data) {
-                setOffers(data);
-            } else if (error) {
+            try {
+                const res = await fetch('/api/offers');
+                if (res.ok) {
+                    const data = await res.json();
+                    setOffers(Array.isArray(data) ? data : []);
+                }
+            } catch (error) {
                 console.error('Error fetching offers:', error);
             }
             setLoading(false);

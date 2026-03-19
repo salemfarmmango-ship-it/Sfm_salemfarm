@@ -1,7 +1,7 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import { Package, Users, BadgeDollarSign, ShoppingBag } from 'lucide-react';
-import { supabase } from '@/lib/supabase';
+
 import { MangoLoader } from '@/components/common/MangoLoader';
 
 export default function AdminDashboard() {
@@ -30,71 +30,20 @@ export default function AdminDashboard() {
     const fetchDashboardData = async (date: string) => {
         setLoading(true);
         try {
-            // Prepare date range
-            let startDateStr = '';
-            let endDateStr = '';
+            // Fetch everything from our unified stats proxy
+            const res = await fetch(`/api/admin/stats?date=${date}`);
+            const data = await res.json();
 
-            if (date) {
-                const startDate = new Date(date);
-                startDate.setHours(0, 0, 0, 0);
-                const endDate = new Date(date);
-                endDate.setHours(23, 59, 59, 999);
-
-                startDateStr = startDate.toISOString();
-                endDateStr = endDate.toISOString();
-            }
-
-            // Fetch total revenue and order count (Filtered by date)
-            let ordersQuery = supabase.from('orders').select('total_amount');
-            if (date) {
-                ordersQuery = ordersQuery.gte('created_at', startDateStr).lte('created_at', endDateStr);
-            }
-            const { data: orders } = await ordersQuery;
-
-            const totalRevenue = orders?.reduce((sum, order) => sum + (order.total_amount || 0), 0) || 0;
-            const orderCount = orders?.length || 0;
-
-            // Fetch products count (Total, not filtered)
-            const { count: productCount } = await supabase
-                .from('products')
-                .select('*', { count: 'exact', head: true });
-
-            // Fetch customers count (New customers filtered by date)
-            let customersQuery = supabase.from('profiles').select('*', { count: 'exact', head: true });
-            if (date) {
-                customersQuery = customersQuery.gte('created_at', startDateStr).lte('created_at', endDateStr);
-            }
-            const { count: customerCount } = await customersQuery;
-
-            // Fetch recent orders with user info (Filtered by date)
-            let recentOrdersQuery = supabase
-                .from('orders')
-                .select(`
-                    id,
-                    total_amount,
-                    status,
-                    created_at,
-                    profiles:user_id (
-                        full_name
-                    )
-                `)
-                .order('created_at', { ascending: false })
-                .limit(10); // Increased limit for better visibility
-
-            if (date) {
-                recentOrdersQuery = recentOrdersQuery.gte('created_at', startDateStr).lte('created_at', endDateStr);
-            }
-
-            const { data: recentOrdersData } = await recentOrdersQuery;
+            if (!res.ok) throw new Error(data.error || 'Failed to fetch dashboard data');
 
             setStats({
-                revenue: totalRevenue,
-                orders: orderCount,
-                products: productCount || 0,
-                customers: customerCount || 0
+                revenue: data.revenue || 0,
+                orders: data.orders || 0,
+                products: data.products || 0,
+                customers: data.customers || 0
             });
 
-            setRecentOrders(recentOrdersData || []);
+            setRecentOrders(data.recentOrders || []);
         } catch (error) {
             console.error('Error fetching dashboard data:', error);
         } finally {
@@ -174,7 +123,7 @@ export default function AdminDashboard() {
                                         <OrderRow
                                             key={order.id}
                                             id={`#${order.id}`}
-                                            customer={(order.profiles as any)?.full_name || 'Guest'}
+                                            customer={order.customer_name || 'Guest'}
                                             status={order.status}
                                             amount={`₹${order.total_amount.toLocaleString('en-IN')}`}
                                         />

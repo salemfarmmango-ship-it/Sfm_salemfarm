@@ -1,60 +1,49 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-import bcrypt from 'bcryptjs';
-
-const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_KEY!
-);
 
 export async function POST(request: NextRequest) {
     try {
-        const { email, password } = await request.json();
+        const body = await request.json();
+        const { email, password } = body;
 
         if (!email || !password) {
             return NextResponse.json({ error: 'Email and password are required' }, { status: 400 });
         }
 
-        // Fetch admin user by email
-        console.log('Looking for admin with email:', email);
-        const { data: admin, error: fetchError } = await supabase
-            .from('admin_users')
-            .select('*')
-            .eq('email', email)
-            .single();
-
-        console.log('Fetch result:', { admin: admin ? { email: admin.email, has_hash: !!admin.password_hash } : null, error: fetchError });
-
-        if (fetchError || !admin) {
-            console.log('Admin not found or error:', fetchError);
-            return NextResponse.json({ error: 'Invalid email or password' }, { status: 401 });
-        }
-
-        // Verify password
-        console.log('Comparing password with hash');
-        const isValidPassword = await bcrypt.compare(password, admin.password_hash);
-        console.log('Password valid:', isValidPassword);
-
-        if (!isValidPassword) {
-            return NextResponse.json({ error: 'Invalid email or password' }, { status: 401 });
-        }
-
-        // Create session cookie (7 days expiry)
-        const response = NextResponse.json({
-            success: true,
-            admin: {
-                id: admin.id,
-                email: admin.email,
-                name: admin.name
-            }
+        // Proxy to PHP backend for admin login (checks sfm.users with role='admin')
+        const res = await fetch('http://127.0.0.1/SFM/backend/auth/admin-login.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password })
         });
 
-        response.cookies.set('admin_session', admin.id, {
+        const data = await res.json();
+
+        if (!res.ok) {
+            return NextResponse.json({ error: data.error || 'Invalid email or password' }, { status: res.status });
+        }
+
+        // Set admin session cookie
+        const response = NextResponse.json({
+            success: true,
+            admin: data.admin
+        });
+
+        response.cookies.set('admin_session', data.admin.id, {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
             sameSite: 'lax',
             maxAge: 60 * 60 * 24 * 7 // 7 days
         });
+
+        // Also set a JWT token so admin can use authenticated API routes
+        if (data.token) {
+            response.cookies.set('sfm_token', data.token, {
+                httpOnly: true,
+                secure: process.env.NODE_ENV === 'production',
+                sameSite: 'lax',
+                maxAge: 60 * 60 * 24 * 7
+            });
+        }
 
         return response;
 

@@ -1,7 +1,7 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/Button';
-import { supabase } from '@/lib/supabase';
+
 import { X, Download, ChevronLeft, ChevronRight, CheckSquare, Square, Filter, Printer } from 'lucide-react';
 import { EmailService } from '@/lib/EmailService';
 
@@ -26,7 +26,7 @@ export default function AdminOrdersPage() {
 
     // Filter and Selection state
     const [statusFilter, setStatusFilter] = useState('');
-    const [dateFilter, setDateFilter] = useState(new Date().toISOString().split('T')[0]); // Default to Today
+    const [dateFilter, setDateFilter] = useState(''); // Default to no filter (show all orders)
     const [selectedOrderIds, setSelectedOrderIds] = useState<number[]>([]);
     const [bulkUpdating, setBulkUpdating] = useState(false);
     const [isMobile, setIsMobile] = useState(false);
@@ -55,41 +55,20 @@ export default function AdminOrdersPage() {
     const fetchOrders = async (page: number) => {
         setLoading(true);
         try {
-            const from = (page - 1) * pageSize;
-            const to = from + pageSize - 1;
+            const queryParams = new URLSearchParams({
+                page: page.toString(),
+                limit: pageSize.toString(),
+                status: statusFilter,
+                date: dateFilter
+            });
 
-            let query = supabase
-                .from('orders')
-                .select(`
-                    *,
-                    profiles:user_id (
-                        full_name
-                    )
-                `, { count: 'exact' })
-                .order('created_at', { ascending: false })
-                .range(from, to);
+            const res = await fetch(`/api/admin/orders?${queryParams.toString()}`);
+            const result = await res.json();
 
-            if (statusFilter) {
-                query = query.eq('status', statusFilter);
-            }
+            if (!res.ok) throw new Error(result.error || 'Failed to fetch orders');
 
-            if (dateFilter) {
-                const startDate = new Date(dateFilter);
-                startDate.setHours(0, 0, 0, 0);
-                const endDate = new Date(dateFilter);
-                endDate.setHours(23, 59, 59, 999);
-
-                // Adjust for timezone offset if needed, but simple ISO string comparison usually works best for UTC stored dates
-                // Assuming Supabase stores in UTC, we might need to be careful. 
-                // Detailed approach: Filter >= startDate AND <= endDate
-                query = query.gte('created_at', startDate.toISOString()).lte('created_at', endDate.toISOString());
-            }
-
-            const { data, error, count } = await query;
-
-            if (error) throw error;
-            setOrders(data || []);
-            setTotalOrders(count || 0);
+            setOrders(result.data || []);
+            setTotalOrders(result.count || 0);
 
             // Clear selection when data changes
             setSelectedOrderIds([]);
@@ -103,36 +82,26 @@ export default function AdminOrdersPage() {
     const handleExportCSV = async () => {
         setExporting(true);
         try {
-            let query = supabase
-                .from('orders')
-                .select(`
-                    id,
-                    created_at,
-                    status,
-                    total_amount,
-                    payment_status,
-                    profiles:user_id (
-                        full_name
-                    )
-                `)
-                .order('created_at', { ascending: false });
+            const queryParams = new URLSearchParams({
+                limit: '1000', // Fetch a large batch for export
+                status: statusFilter
+            });
 
-            if (statusFilter) {
-                query = query.eq('status', statusFilter);
-            }
+            const res = await fetch(`/api/admin/orders?${queryParams.toString()}`);
+            const result = await res.json();
 
-            const { data, error } = await query;
-
-            if (error) throw error;
-            if (!data || data.length === 0) {
+            if (!res.ok) throw new Error(result.error || 'Failed to fetch orders for export');
+            
+            const data = result.data || [];
+            if (data.length === 0) {
                 alert('No orders to export');
                 return;
             }
 
             const headers = ['Order ID', 'Customer', 'Date', 'Amount', 'Status', 'Payment'];
-            const rows = data.map(order => [
+            const rows = data.map((order: any) => [
                 `#${order.id}`,
-                (order.profiles as any)?.full_name || 'Guest',
+                order.customer_name || 'Guest',
                 new Date(order.created_at).toLocaleDateString('en-IN'),
                 order.total_amount,
                 order.status,
@@ -141,7 +110,7 @@ export default function AdminOrdersPage() {
 
             const csvContent = [
                 headers.join(','),
-                ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
+                ...rows.map((row: any[]) => row.map((cell: any) => `"${cell}"`).join(','))
             ].join('\n');
 
             const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -162,12 +131,14 @@ export default function AdminOrdersPage() {
 
     const handleStatusChange = async (orderId: number, newStatus: string) => {
         try {
-            const { error } = await supabase
-                .from('orders')
-                .update({ status: newStatus })
-                .eq('id', orderId);
+            const res = await fetch('/api/admin/orders', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: orderId, status: newStatus })
+            });
 
-            if (error) throw error;
+            const result = await res.json();
+            if (!res.ok) throw new Error(result.error || 'Failed to update status');
 
             // If status changed to shipped, send email
             if (newStatus === 'shipped') {
@@ -177,24 +148,6 @@ export default function AdminOrdersPage() {
                         console.error('Failed to send shipping email:', err);
                     });
                 }
-            }
-
-            // Send Push Notification for Status Change
-            const orderToNotify = orders.find(o => o.id === orderId);
-            if (orderToNotify) {
-                fetch('/api/notifications/send', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        userIds: [orderToNotify.user_id],
-                        notification: {
-                            title: 'Order Updated! 🚚',
-                            body: `Your order #${orderId} status has changed to ${newStatus}.`,
-                            url: `/account?tab=orders`,
-                            tag: `order-${orderId}`
-                        }
-                    })
-                }).catch(err => console.error('Failed to send Push Notification:', err));
             }
 
             setOrders(orders.map(order =>
@@ -211,12 +164,14 @@ export default function AdminOrdersPage() {
 
         setBulkUpdating(true);
         try {
-            const { error } = await supabase
-                .from('orders')
-                .update({ status: newStatus })
-                .in('id', selectedOrderIds);
+            const res = await fetch('/api/admin/orders', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ids: selectedOrderIds, status: newStatus })
+            });
 
-            if (error) throw error;
+            const result = await res.json();
+            if (!res.ok) throw new Error(result.error || 'Bulk update failed');
 
             // If status changed to shipped, send bulk emails
             if (newStatus === 'shipped') {
@@ -229,26 +184,6 @@ export default function AdminOrdersPage() {
                     }
                 });
             }
-
-            // Send Bulk Push Notifications
-            selectedOrderIds.forEach(id => {
-                const orderToNotify = orders.find(o => o.id === id);
-                if (orderToNotify) {
-                    fetch('/api/notifications/send', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            userIds: [orderToNotify.user_id],
-                            notification: {
-                                title: 'Order Updated! 🚚',
-                                body: `Your order #${id} status has changed to ${newStatus}.`,
-                                url: `/account?tab=orders`,
-                                tag: `order-${id}`
-                            }
-                        })
-                    }).catch(err => console.error('Failed to send Bulk Push Notification:', err));
-                }
-            });
 
             // Optimistically update UI
             setOrders(orders.map(order =>
@@ -268,19 +203,15 @@ export default function AdminOrdersPage() {
         setIsPrinting(true);
 
         try {
-            const { data, error } = await supabase
-                .from('orders')
-                .select(`
-                    *,
-                    order_items (
-                        *,
-                        products (name)
-                    )
-                `)
-                .in('id', selectedOrderIds);
+            // Fetch detailed info for each selected order
+            const promises = selectedOrderIds.map(id => 
+                fetch(`/api/admin/orders/${id}`).then(res => res.json())
+            );
+            
+            const results = await Promise.all(promises);
+            const data = results.filter(r => !r.error);
 
-            if (error) throw error;
-            if (data) {
+            if (data.length > 0) {
                 setPrintData(data);
                 // Wait for state to update and then print
                 setTimeout(() => {
@@ -310,23 +241,15 @@ export default function AdminOrdersPage() {
 
     const handleViewOrder = async (order: any) => {
         try {
-            const { data, error } = await supabase
-                .from('order_items')
-                .select(`
-                    *,
-                    products (
-                        name,
-                        price
-                    )
-                `)
-                .eq('order_id', order.id);
+            const res = await fetch(`/api/admin/orders/${order.id}`);
+            const data = await res.json();
 
-            if (error) throw error;
+            if (!res.ok) throw new Error(data.error || 'Failed to load order details');
 
-            setOrderItems(data || []);
-            setViewingOrder(order);
-            setTrackingId(order.tracking_id || '');
-            setCourierPartner(order.courier_partner || '');
+            setOrderItems(data.order_items || []);
+            setViewingOrder(data);
+            setTrackingId(data.tracking_id || '');
+            setCourierPartner(data.courier_partner || '');
         } catch (error: any) {
             alert(`Failed to load order details: ${error.message}`);
         }
@@ -336,11 +259,11 @@ export default function AdminOrdersPage() {
         if (!viewingOrder) return;
         setSavingTracking(true);
         try {
-            const res = await fetch('/api/admin/orders/tracking', {
-                method: 'POST',
+            const res = await fetch('/api/admin/orders', {
+                method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    orderId: viewingOrder.id,
+                    id: viewingOrder.id,
                     tracking_id: trackingId,
                     courier_partner: courierPartner
                 })

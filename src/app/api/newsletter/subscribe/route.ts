@@ -1,10 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 export async function POST(request: NextRequest) {
     try {
@@ -15,18 +9,20 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Valid email is required' }, { status: 400 });
         }
 
-        const { error } = await supabase
-            .from('newsletter_subscribers')
-            .insert([{ email }]);
+        // Forward to PHP backend
+        const response = await fetch('http://127.0.0.1/SFM/backend/api/subscribers.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email })
+        });
 
-        if (error) {
-            if (error.code === '23505') {
-                return NextResponse.json({ message: 'You are already subscribed!' }, { status: 200 });
-            }
-            throw error;
+        const data = await response.json();
+
+        if (response.ok) {
+            return NextResponse.json({ message: 'Subscribed successfully!' }, { status: 201 });
+        } else {
+             return NextResponse.json({ error: data.error || 'Subscription failed' }, { status: response.status });
         }
-
-        return NextResponse.json({ message: 'Subscribed successfully!' }, { status: 201 });
 
     } catch (error: any) {
         console.error('Newsletter subscription error:', error);

@@ -1,27 +1,9 @@
 'use client';
-import { createContext, useContext, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
+import { CartContext, CartItem } from '@/hooks/useCart';
 
-export type CartItem = {
-    id: number;
-    name: string;
-    price: number;
-    quantity: number;
-    image?: string;
-};
-
-type CartContextType = {
-    items: CartItem[];
-    addToCart: (product: any, qty?: number, openSidebar?: boolean) => void;
-    decrementItem: (id: number) => void;
-    removeFromCart: (id: number) => void;
-    clearCart: () => void;
-    cartCount: number;
-    isAnimating: boolean;
-    isCartOpen: boolean;
-    setIsCartOpen: (open: boolean) => void;
-};
-
-const CartContext = createContext<CartContextType | undefined>(undefined);
+export { useCart } from '@/hooks/useCart';
+export type { CartItem };
 
 export const CartProvider = ({ children }: { children: React.ReactNode }) => {
     const [items, setItems] = useState<CartItem[]>([]);
@@ -59,11 +41,14 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
 
     const addToCart = (product: any, qty: number = 1, openSidebar: boolean = true) => {
         setItems(prev => {
-            const existing = prev.find(i => i.id === product.id);
+            const finalWeight = product.weight || product.size || '';
+            const cartItemId = finalWeight ? `${product.id}_${finalWeight}` : String(product.id);
+            const existing = prev.find(i => i.cartItemId === cartItemId);
+            
             if (existing) {
-                return prev.map(i => i.id === product.id ? { ...i, quantity: i.quantity + qty } : i);
+                return prev.map(i => i.cartItemId === cartItemId ? { ...i, quantity: i.quantity + qty } : i);
             }
-            return [...prev, { ...product, quantity: qty }];
+            return [...prev, { ...product, cartItemId, weight: finalWeight, quantity: qty }];
         });
 
         // Trigger animation
@@ -74,11 +59,11 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
         setTimeout(() => setIsAnimating(false), 500); // Reset after 500ms
     };
 
-    const decrementItem = (id: number) => {
+    const decrementItem = (cartItemId: string) => {
         setItems(prev => {
-            const existing = prev.find(i => i.id === id);
+            const existing = prev.find(i => i.cartItemId === cartItemId);
             if (existing && existing.quantity > 1) {
-                return prev.map(i => i.id === id ? { ...i, quantity: i.quantity - 1 } : i);
+                return prev.map(i => i.cartItemId === cartItemId ? { ...i, quantity: i.quantity - 1 } : i);
             }
             // If quantity is 1, regular behavior is usually to keep it at 1 or remove.
             // Let's keep it at 1. User should use 'remove' button to delete.
@@ -86,8 +71,36 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
         });
     };
 
-    const removeFromCart = (id: number) => {
-        setItems(prev => prev.filter(i => i.id !== id));
+    const removeFromCart = (cartItemId: string) => {
+        setItems(prev => {
+            // Primary match: exact cartItemId
+            const directMatch = prev.some(i => i.cartItemId === cartItemId);
+            if (directMatch) {
+                return prev.filter(i => i.cartItemId !== cartItemId);
+            }
+            // Fallback: match by the numeric id part (handles legacy numeric IDs)
+            const numericId = cartItemId.split('_')[0];
+            return prev.filter(i => String(i.id) !== numericId && i.cartItemId !== cartItemId);
+        });
+    };
+
+    // Update weight (and price) for a specific cart item.
+    // basePrice should be the original 1kg price for the product.
+    const updateItemWeight = (cartItemId: string, newWeight: string, basePrice: number) => {
+        const multiplier = newWeight === '5kg' ? 5 : newWeight === '3kg' ? 3 : 1;
+        const newPrice = basePrice * multiplier;
+        setItems(prev => {
+            const existing = prev.find(i => i.cartItemId === cartItemId);
+            if (!existing) return prev;
+            // Build the new cartItemId with the new weight
+            const newCartItemId = `${existing.id}_${newWeight}`;
+            // Remove the old, re-add with new weight/price/id
+            return prev.map(i =>
+                i.cartItemId === cartItemId
+                    ? { ...i, cartItemId: newCartItemId, weight: newWeight, price: newPrice }
+                    : i
+            );
+        });
     };
 
     const clearCart = () => {
@@ -102,6 +115,7 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
             addToCart,
             decrementItem,
             removeFromCart,
+            updateItemWeight,
             clearCart,
             cartCount,
             isAnimating,
@@ -111,12 +125,4 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
             {children}
         </CartContext.Provider>
     );
-};
-
-export const useCart = () => {
-    const context = useContext(CartContext);
-    if (context === undefined) {
-        throw new Error('useCart must be used within a CartProvider');
-    }
-    return context;
 };

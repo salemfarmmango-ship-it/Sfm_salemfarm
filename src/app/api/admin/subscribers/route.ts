@@ -1,55 +1,67 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { verifyAdmin, unauthorizedResponse } from '@/lib/adminAuth';
 
 export const dynamic = 'force-dynamic';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY!;
-
-const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
-
-async function verifyAdmin(request: NextRequest) {
-    const adminId = request.cookies.get('admin_session')?.value;
-    if (!adminId) return false;
-
-    const { data } = await supabaseAdmin
-        .from('admin_users')
-        .select('id')
-        .eq('id', adminId)
-        .single();
-
-    return !!data;
-}
-
 export async function GET(request: NextRequest) {
     try {
-        if (!await verifyAdmin(request)) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        const { authenticated, token } = await verifyAdmin(request);
+        if (!authenticated) {
+            return unauthorizedResponse();
         }
 
-        const { searchParams } = new URL(request.url);
-        const page = parseInt(searchParams.get('page') || '1');
-        const limit = parseInt(searchParams.get('limit') || '10');
-        const offset = (page - 1) * limit;
-
-        const { data, error, count } = await supabaseAdmin
-            .from('newsletter_subscribers')
-            .select('*', { count: 'exact' })
-            .order('subscribed_at', { ascending: false })
-            .range(offset, offset + limit - 1);
-
-        if (error) throw error;
-
-        return NextResponse.json({
-            subscribers: data,
-            pagination: {
-                total: count,
-                page,
-                limit,
-                totalPages: Math.ceil((count || 0) / limit)
+        const res = await fetch('http://127.0.0.1/SFM/backend/api/subscribers.php', {
+            cache: 'no-store',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'X-SFM-Token': token || ''
             }
         });
 
+        const data = await res.json();
+        return NextResponse.json(data);
+    } catch (error: any) {
+        return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+}
+
+export async function POST(request: NextRequest) {
+    try {
+        // Publicly accessible for subscribing
+        const body = await request.json();
+        const res = await fetch('http://127.0.0.1/SFM/backend/api/subscribers.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+        });
+
+        const data = await res.json();
+        return NextResponse.json(data);
+    } catch (error: any) {
+        return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+}
+
+export async function DELETE(request: NextRequest) {
+    try {
+        const { authenticated, token } = await verifyAdmin(request);
+        if (!authenticated) {
+            return unauthorizedResponse();
+        }
+
+        const { searchParams } = new URL(request.url);
+        const id = searchParams.get('id');
+
+        const res = await fetch(`http://127.0.0.1/SFM/backend/api/subscribers.php?id=${id}`, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'X-SFM-Token': token || ''
+            }
+        });
+
+        const data = await res.json();
+        return NextResponse.json(data);
     } catch (error: any) {
         return NextResponse.json({ error: error.message }, { status: 500 });
     }

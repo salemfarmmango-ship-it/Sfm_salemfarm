@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/Button';
 import { Share2, Copy, Check, Link as LinkIcon, ExternalLink, Search as SearchIcon, ShoppingBag, Star } from 'lucide-react';
 import Image from 'next/image';
@@ -12,52 +12,55 @@ export default function SharePage() {
     const [searchTerm, setSearchTerm] = useState('');
     const [copiedId, setCopiedId] = useState<number | null>(null);
     const [userMode, setUserMode] = useState<'guest' | 'customer'>('guest');
+    const { user, loading: authLoading } = useAuth();
 
     useEffect(() => {
+        if (authLoading) return;
+
         const fetchData = async () => {
             setLoading(true);
             try {
-                // 1. Check User Session
-                const { data: { session } } = await supabase.auth.getSession();
-
                 let productIds: number[] = [];
 
-                if (session) {
-                    // 2. Fetch User's Orders to get Product IDs
-                    const { data: orders } = await supabase
-                        .from('orders')
-                        .select('id')
-                        .eq('user_id', session.user.id);
-
-                    if (orders && orders.length > 0) {
-                        const orderIds = orders.map(o => o.id);
-                        const { data: items } = await supabase
-                            .from('order_items')
-                            .select('product_id')
-                            .in('order_id', orderIds);
-
-                        if (items) {
-                            productIds = Array.from(new Set(items.map(i => i.product_id))); // Deduplicate
+                if (user) {
+                    // Fetch User's Orders from PHP API
+                    const orderRes = await fetch('/api/orders?limit=50');
+                    if (orderRes.ok) {
+                        const orderData = await orderRes.json();
+                        const orders = orderData.data || [];
+                        
+                        if (orders.length > 0) {
+                            // Fetch items for each order to get product IDs
+                            const itemsPromises = orders.map((o: any) => 
+                                fetch(`/api/orders?id=${o.id}`).then(r => r.ok ? r.json() : null)
+                            );
+                            const ordersWithItems = await Promise.all(itemsPromises);
+                            
+                            const idsSet = new Set<number>();
+                            ordersWithItems.forEach(order => {
+                                if (order && order.order_items) {
+                                    order.order_items.forEach((item: any) => idsSet.add(item.product_id));
+                                }
+                            });
+                            productIds = Array.from(idsSet);
                         }
                     }
                 }
 
-                // 3. Decide what to fetch based on history
-                let query = supabase.from('products').select('*').gt('stock', 0).eq('season_over', false);
-
-                if (productIds.length > 0) {
-                    setUserMode('customer');
-                    query = query.in('id', productIds);
-                } else {
-                    setUserMode('guest');
-                    // Fallback to Featured if no orders or guest
-                    query = query.order('is_featured', { ascending: false }).limit(12);
-                }
-
-                const { data: finalProducts } = await query;
-
-                if (finalProducts) {
-                    setProducts(finalProducts);
+                // Fetch products from PHP API
+                const prodRes = await fetch('/api/products?limit=100');
+                if (prodRes.ok) {
+                    const allProducts = await prodRes.json();
+                    
+                    if (productIds.length > 0) {
+                        setUserMode('customer');
+                        // Filter products to only show purchased ones
+                        setProducts(allProducts.filter((p: any) => productIds.includes(p.id)));
+                    } else {
+                        setUserMode('guest');
+                        // Show featured or all products if guest/no orders
+                        setProducts(allProducts.filter((p: any) => Number(p.stock) > 0 && !p.season_over));
+                    }
                 }
 
             } catch (error) {
@@ -68,7 +71,7 @@ export default function SharePage() {
         };
 
         fetchData();
-    }, []);
+    }, [user, authLoading]);
 
     const getShareData = (product: any) => {
         const url = `https://salemfarmmango.com/product/${product.id}`;
@@ -187,7 +190,7 @@ export default function SharePage() {
                                         {/* Image */}
                                         <div style={{ position: 'relative', height: '240px', background: '#f8f8f8', flexShrink: 0 }}>
                                             {product.images?.[0] ? (
-                                                <Image src={product.images[0]} alt={product.name} fill style={{ objectFit: 'cover' }} />
+                                                <Image src={product.images[0]} alt={product.name} fill style={{ objectFit: 'cover' }} unoptimized />
                                             ) : (
                                                 <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ddd' }}>
                                                     <Share2 size={48} />

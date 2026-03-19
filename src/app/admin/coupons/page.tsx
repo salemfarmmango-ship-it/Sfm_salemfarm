@@ -1,7 +1,7 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/Button';
-import { supabase } from '@/lib/supabase';
+import { MultiSelect } from '@/components/ui/MultiSelect';
 
 type Coupon = {
     id: number;
@@ -11,6 +11,12 @@ type Coupon = {
     min_order_value: number;
     max_discount_value: number | null;
     is_active: boolean;
+    product_ids?: number[];
+};
+
+type Product = {
+    id: number;
+    name: string;
 };
 
 export default function AdminCouponsPage() {
@@ -21,26 +27,38 @@ export default function AdminCouponsPage() {
     const [discountType, setDiscountType] = useState<'percentage' | 'fixed'>('percentage');
     const [minOrderValue, setMinOrderValue] = useState('');
     const [maxDiscountValue, setMaxDiscountValue] = useState('');
+    const [products, setProducts] = useState<Product[]>([]);
+    const [selectedProductIds, setSelectedProductIds] = useState<number[]>([]);
     const [submitting, setSubmitting] = useState(false);
 
     useEffect(() => {
         fetchCoupons();
+        fetchProducts();
     }, []);
+
+    const fetchProducts = async () => {
+        try {
+            const response = await fetch('/api/admin/products');
+            const data = await response.json();
+            if (response.ok) setProducts(data || []);
+        } catch (error) {
+            console.error('Error fetching products:', error);
+        }
+    };
 
     const fetchCoupons = async () => {
         setLoading(true);
-        const { data, error } = await supabase
-            .from('coupons')
-            .select('*')
-            .order('created_at', { ascending: false });
-
-        if (error) {
-            console.error('Error fetching coupons:', error);
-            alert('Failed to fetch coupons');
-        } else {
+        try {
+            const response = await fetch('/api/admin/coupons');
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.error || 'Failed to fetch coupons');
             setCoupons(data || []);
+        } catch (error: any) {
+            console.error('Error fetching coupons:', error);
+            alert('Failed to fetch coupons: ' + error.message);
+        } finally {
+            setLoading(false);
         }
-        setLoading(false);
     };
 
     const addCoupon = async () => {
@@ -50,62 +68,69 @@ export default function AdminCouponsPage() {
         }
 
         setSubmitting(true);
-        const { data, error } = await supabase
-            .from('coupons')
-            .insert([
-                {
+        try {
+            const response = await fetch('/api/admin/coupons', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
                     code: newCode.toUpperCase(),
                     discount_value: parseFloat(discountValue),
                     discount_type: discountType,
                     min_order_value: parseFloat(minOrderValue) || 0,
                     max_discount_value: discountType === 'percentage' && maxDiscountValue ? parseFloat(maxDiscountValue) : null,
-                    is_active: true
-                }
-            ])
-            .select()
-            .single();
+                    is_active: true,
+                    product_ids: selectedProductIds
+                })
+            });
 
-        if (error) {
-            console.error('Error creating coupon:', error);
-            alert('Failed to create coupon: ' + error.message);
-        } else {
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.error || 'Failed to create coupon');
+
             setCoupons([data, ...coupons]);
             setNewCode('');
             setDiscountValue('');
             setMinOrderValue('');
             setMaxDiscountValue('');
+            setSelectedProductIds([]);
+        } catch (error: any) {
+            console.error('Error creating coupon:', error);
+            alert('Failed to create coupon: ' + error.message);
+        } finally {
+            setSubmitting(false);
         }
-        setSubmitting(false);
     };
 
     const deleteCoupon = async (id: number) => {
         if (!confirm('Are you sure you want to delete this coupon?')) return;
 
-        const { error } = await supabase
-            .from('coupons')
-            .delete()
-            .eq('id', id);
+        try {
+            const response = await fetch(`/api/admin/coupons?id=${id}`, {
+                method: 'DELETE'
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.error || 'Failed to delete coupon');
 
-        if (error) {
-            console.error('Error deleting coupon:', error);
-            alert('Failed to delete coupon');
-        } else {
             setCoupons(coupons.filter(c => c.id !== id));
+        } catch (error: any) {
+            console.error('Error deleting coupon:', error);
+            alert('Failed to delete coupon: ' + error.message);
         }
     };
 
-    // Toggle Active Status (Optional but good to have)
     const toggleStatus = async (id: number, currentStatus: boolean) => {
-        const { error } = await supabase
-            .from('coupons')
-            .update({ is_active: !currentStatus })
-            .eq('id', id);
+        try {
+            const response = await fetch('/api/admin/coupons', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id, is_active: !currentStatus })
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.error || 'Failed to update status');
 
-        if (error) {
-            console.error('Error updating status:', error);
-            alert('Failed to update status');
-        } else {
             setCoupons(coupons.map(c => c.id === id ? { ...c, is_active: !currentStatus } : c));
+        } catch (error: any) {
+            console.error('Error updating status:', error);
+            alert('Failed to update status: ' + error.message);
         }
     };
 
@@ -168,7 +193,16 @@ export default function AdminCouponsPage() {
                             style={{ width: '100%', padding: '0.5rem', border: '1px solid #ccc', borderRadius: '0.25rem', background: discountType === 'fixed' ? '#f3f4f6' : 'white' }}
                         />
                     </div>
-                    <Button onClick={addCoupon} disabled={submitting}>
+                    <div style={{ gridColumn: 'span 2' }}>
+                        <MultiSelect
+                            label="Restrict to Products"
+                            options={products}
+                            selectedIds={selectedProductIds}
+                            onChange={(ids) => setSelectedProductIds(ids)}
+                            placeholder="All Products"
+                        />
+                    </div>
+                    <Button onClick={addCoupon} disabled={submitting} style={{ height: '42px' }}>
                         {submitting ? 'Creating...' : 'Create'}
                     </Button>
                 </div>
@@ -185,6 +219,7 @@ export default function AdminCouponsPage() {
                                 <th style={{ padding: '0.5rem' }}>Discount</th>
                                 <th style={{ padding: '0.5rem' }}>Min Order</th>
                                 <th style={{ padding: '0.5rem' }}>Max Disc.</th>
+                                <th style={{ padding: '0.5rem' }}>Apply To</th>
                                 <th style={{ padding: '0.5rem' }}>Status</th>
                                 <th style={{ padding: '0.5rem' }}>Action</th>
                             </tr>
@@ -206,6 +241,13 @@ export default function AdminCouponsPage() {
                                         </td>
                                         <td style={{ padding: '1rem 0.5rem', color: '#666' }}>
                                             {c.max_discount_value ? `₹${c.max_discount_value}` : '-'}
+                                        </td>
+                                        <td style={{ padding: '1rem 0.5rem', fontSize: '0.8rem', color: '#666' }}>
+                                            {c.product_ids && c.product_ids.length > 0 ? (
+                                                <div title={c.product_ids.map(id => products.find(p => p.id === id)?.name).join(', ')}>
+                                                    {c.product_ids.length} Products
+                                                </div>
+                                            ) : 'All Products'}
                                         </td>
 
 

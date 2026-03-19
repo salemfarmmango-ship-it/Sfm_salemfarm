@@ -2,13 +2,15 @@
 
 import React, { useState, useEffect } from 'react';
 import { HeroCarousel } from '@/components/home/HeroCarousel';
-import { Plus, Trash2, Save, GripVertical, Image as ImageIcon, RotateCcw, ChevronUp, ChevronDown, Monitor, Tablet, Smartphone } from 'lucide-react';
+import { Plus, Trash2, Save, GripVertical, Image as ImageIcon, RotateCcw, ChevronUp, ChevronDown, Monitor, Tablet, Smartphone, Upload, Loader2 } from 'lucide-react';
 
 export default function AdminHeroPage() {
     const [slides, setSlides] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [previewMode, setPreviewMode] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
+
+    const [uploadingMap, setUploadingMap] = useState<Record<string, boolean>>({});
 
     // Notification state
     const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
@@ -44,6 +46,8 @@ export default function AdminHeroPage() {
         newSlides[index] = { ...newSlides[index], [field]: value };
         setSlides(newSlides);
     };
+
+
 
     const moveSlide = (index: number, direction: 'up' | 'down') => {
         if (direction === 'up' && index === 0) return;
@@ -109,16 +113,22 @@ export default function AdminHeroPage() {
                 const method = isNew ? 'POST' : 'PUT';
                 if (isNew) delete payload.id;
 
-                await fetch('/api/hero-slides', {
+                const res = await fetch('/api/hero-slides', {
                     method,
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 });
+
+                if (!res.ok) {
+                    const errorData = await res.json();
+                    throw new Error(errorData.details || errorData.error || 'Failed to save');
+                }
             }
             showNotification('Saved successfully!', 'success');
             fetchSlides();
-        } catch (error) {
-            showNotification('Save failed', 'error');
+        } catch (error: any) {
+            console.error('Save error:', error);
+            showNotification(`Save failed: ${error.message}`, 'error');
         } finally {
             setSaving(false);
         }
@@ -349,24 +359,28 @@ export default function AdminHeroPage() {
                                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
                                         <div>
                                             <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '500', marginBottom: '0.25rem', color: '#6b7280' }}>Foreground Image</label>
-                                            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-start' }}>
+                                            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                                                 {slide.image && (
                                                     <div style={{ width: '40px', height: '40px', borderRadius: '4px', border: '1px solid #e5e7eb', overflow: 'hidden', flexShrink: 0, background: '#f3f4f6' }}>
                                                         <img src={slide.image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                                     </div>
                                                 )}
-                                                <input maxLength={500} style={{ flex: 1, padding: '0.4rem', border: '1px solid #d1d5db', borderRadius: '4px', fontSize: '0.85rem' }} type="text" value={slide.image} onChange={e => handleSlideChange(index, 'image', e.target.value)} placeholder="/image.png" />
+                                                <div style={{ flex: 1, position: 'relative' }}>
+                                                    <input maxLength={500} style={{ width: '100%', padding: '0.4rem', border: '1px solid #d1d5db', borderRadius: '4px', fontSize: '0.85rem' }} type="text" value={slide.image} onChange={e => handleSlideChange(index, 'image', e.target.value)} placeholder="/image.png" />
+                                                </div>
                                             </div>
                                         </div>
                                         <div>
                                             <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '500', marginBottom: '0.25rem', color: '#6b7280' }}>Background Image</label>
-                                            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-start' }}>
+                                            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                                                 {slide.bg_image && (
                                                     <div style={{ width: '40px', height: '40px', borderRadius: '4px', border: '1px solid #e5e7eb', overflow: 'hidden', flexShrink: 0, background: '#f3f4f6' }}>
                                                         <img src={slide.bg_image} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                                     </div>
                                                 )}
-                                                <input maxLength={500} style={{ flex: 1, padding: '0.4rem', border: '1px solid #d1d5db', borderRadius: '4px', fontSize: '0.85rem' }} type="text" value={slide.bg_image} onChange={e => handleSlideChange(index, 'bg_image', e.target.value)} placeholder="/bg.png" />
+                                                <div style={{ flex: 1, position: 'relative' }}>
+                                                    <input maxLength={500} style={{ width: '100%', padding: '0.4rem', border: '1px solid #d1d5db', borderRadius: '4px', fontSize: '0.85rem' }} type="text" value={slide.bg_image} onChange={e => handleSlideChange(index, 'bg_image', e.target.value)} placeholder="/bg.png" />
+                                                </div>
                                             </div>
                                         </div>
                                     </div>

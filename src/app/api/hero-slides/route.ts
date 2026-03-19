@@ -1,62 +1,73 @@
-import { NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { NextRequest, NextResponse } from 'next/server';
 
 // GET all slides matching order
 export async function GET() {
     try {
-        const { data: slides, error } = await supabase
-            .from('hero_slides')
-            .select('*')
-            .order('order_index', { ascending: true });
-
-        if (error) throw error;
+        const response = await fetch('http://127.0.0.1/SFM/backend/api/hero_slides.php', {
+            cache: 'no-store'
+        });
+        const slides = await response.json();
+        
+        if (!response.ok) throw new Error(slides.error || 'Failed to fetch hero slides');
         return NextResponse.json(slides);
-    } catch (error) {
-        console.error('Error fetching hero slides:', error);
-        return NextResponse.json({ error: 'Failed to fetch hero slides' }, { status: 500 });
+    } catch (error: any) {
+        console.error('Error fetching hero slides proxy:', error);
+        return NextResponse.json({ error: 'Failed to fetch hero slides', details: error.message }, { status: 500 });
     }
 }
 
 // POST a new slide
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
     try {
+        const token = req.cookies.get('sfm_token')?.value;
         const body = await req.json();
-        const { data, error } = await supabase
-            .from('hero_slides')
-            .insert([body])
-            .select();
+        
+        const response = await fetch('http://127.0.0.1/SFM/backend/api/hero_slides.php', {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(body)
+        });
 
-        if (error) throw error;
-        return NextResponse.json(data[0]);
-    } catch (error) {
-        console.error('Error creating hero slide:', error);
-        return NextResponse.json({ error: 'Failed to create hero slide' }, { status: 500 });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Failed to create hero slide');
+        return NextResponse.json(data);
+    } catch (error: any) {
+        console.error('Error creating hero slide proxy:', error);
+        return NextResponse.json({ error: 'Failed to create hero slide', details: error.message }, { status: 500 });
     }
 }
 
 // PUT (update) an existing slide
-export async function PUT(req: Request) {
+export async function PUT(req: NextRequest) {
     try {
+        const token = req.cookies.get('sfm_token')?.value;
         const body = await req.json();
-        const { id, ...updates } = body;
 
-        const { data, error } = await supabase
-            .from('hero_slides')
-            .update(updates)
-            .eq('id', id)
-            .select();
+        const response = await fetch('http://127.0.0.1/SFM/backend/api/hero_slides.php', {
+            method: 'PUT',
+            headers: { 
+                'Content-Type': 'application/json' ,
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(body)
+        });
 
-        if (error) throw error;
-        return NextResponse.json(data[0]);
-    } catch (error) {
-        console.error('Error updating hero slide:', error);
-        return NextResponse.json({ error: 'Failed to update hero slide' }, { status: 500 });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Failed to update hero slide');
+        return NextResponse.json(data);
+    } catch (error: any) {
+        console.error('Error updating hero slide proxy:', error);
+        return NextResponse.json({ error: 'Failed to update hero slide', details: error.message }, { status: 500 });
     }
 }
 
 // DELETE a slide
-export async function DELETE(req: Request) {
+export async function DELETE(req: NextRequest) {
     try {
+        const token = req.cookies.get('sfm_token')?.value;
         const { searchParams } = new URL(req.url);
         const id = searchParams.get('id');
 
@@ -64,15 +75,19 @@ export async function DELETE(req: Request) {
             return NextResponse.json({ error: 'Slide ID is required' }, { status: 400 });
         }
 
-        const { error } = await supabase
-            .from('hero_slides')
-            .delete()
-            .eq('id', id);
+        const response = await fetch(`http://127.0.0.1/SFM/backend/api/hero_slides.php?id=${id}`, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
 
-        if (error) throw error;
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Failed to delete hero slide');
+        
         return NextResponse.json({ success: true });
-    } catch (error) {
-        console.error('Error deleting hero slide:', error);
-        return NextResponse.json({ error: 'Failed to delete hero slide' }, { status: 500 });
+    } catch (error: any) {
+        console.error('Error deleting hero slide proxy:', error);
+        return NextResponse.json({ error: 'Failed to delete hero slide', details: error.message }, { status: 500 });
     }
 }

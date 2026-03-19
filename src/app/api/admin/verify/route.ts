@@ -1,12 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 
 export const dynamic = 'force-dynamic';
-
-const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_KEY!
-);
 
 export async function GET(request: NextRequest) {
     try {
@@ -16,20 +10,24 @@ export async function GET(request: NextRequest) {
             return NextResponse.json({ authenticated: false }, { status: 401 });
         }
 
-        // Verify admin exists
-        const { data: admin, error } = await supabase
-            .from('admin_users')
-            .select('id, email, name')
-            .eq('id', adminId)
-            .single();
+        // Verify admin exists in MySQL sfm.users table via PHP backend
+        const res = await fetch(`http://127.0.0.1/SFM/backend/api/admin-verify.php?id=${encodeURIComponent(adminId)}`, {
+            cache: 'no-store'
+        });
 
-        if (error || !admin) {
+        if (!res.ok) {
+            return NextResponse.json({ authenticated: false }, { status: 401 });
+        }
+
+        const data = await res.json();
+
+        if (!data.authenticated) {
             return NextResponse.json({ authenticated: false }, { status: 401 });
         }
 
         return NextResponse.json({
             authenticated: true,
-            admin
+            admin: data.admin
         });
 
     } catch (error) {

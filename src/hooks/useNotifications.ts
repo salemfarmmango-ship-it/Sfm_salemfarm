@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { requestNotificationPermission, onForegroundMessage } from '@/lib/firebase';
-import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/context/AuthContext';
 
 export type NotificationStatus = 'default' | 'granted' | 'denied' | 'unsupported';
 
@@ -20,6 +20,7 @@ const PROMPT_DISMISSED_KEY = 'sfm_notification_prompt_dismissed';
 const PROMPT_DELAY_MS = 5000; // Show prompt after 5 seconds
 
 export function useNotifications(): UseNotificationsReturn {
+    const { user } = useAuth();
     const [status, setStatus] = useState<NotificationStatus>('default');
     const [isSupported, setIsSupported] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
@@ -101,6 +102,15 @@ export function useNotifications(): UseNotificationsReturn {
         };
     }, [status]);
 
+    // Re-sync token when user changes
+    useEffect(() => {
+        if (token && user?.id) {
+            saveTokenToDatabase(token, user.id).catch(err => 
+                console.error('Failed to re-sync notification token on user change:', err)
+            );
+        }
+    }, [token, user?.id]);
+
     // Subscribe to push notifications
     const subscribe = useCallback(async (): Promise<boolean> => {
         if (!isSupported) {
@@ -117,16 +127,14 @@ export function useNotifications(): UseNotificationsReturn {
                 setToken(fcmToken);
                 setStatus('granted');
                 setShowPrompt(false);
-                setIsLoading(false); // Stop loading immediately
 
-                // Save token to Supabase in background - don't await!
-                saveTokenToDatabase(fcmToken).catch(err =>
+                // Save token to DB with user ID if available
+                saveTokenToDatabase(fcmToken, user?.id).catch(err =>
                     console.error('Background token save failed:', err)
                 );
 
                 return true;
             } else {
-                // Check if Notification exists before accessing permission
                 if ('Notification' in window) {
                     setStatus(Notification.permission as NotificationStatus);
                 }
@@ -138,7 +146,7 @@ export function useNotifications(): UseNotificationsReturn {
         } finally {
             setIsLoading(false);
         }
-    }, [isSupported]);
+    }, [isSupported, user?.id]);
 
     // Dismiss the prompt
     const dismissPrompt = useCallback(() => {
@@ -161,8 +169,8 @@ export function useNotifications(): UseNotificationsReturn {
     };
 }
 
-// Save FCM token to Supabase
-async function saveTokenToDatabase(token: string): Promise<void> {
+// Save FCM token to MySQL
+async function saveTokenToDatabase(token: string, userId?: string): Promise<void> {
     try {
         // Get device info
         const deviceInfo = {
@@ -181,6 +189,7 @@ async function saveTokenToDatabase(token: string): Promise<void> {
             body: JSON.stringify({
                 token,
                 deviceInfo,
+                userId
             }),
         });
 
