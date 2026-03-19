@@ -1,0 +1,99 @@
+# ====================================================================
+# .htaccess - API Routing and Security Configuration
+# ====================================================================
+# Place this file in: /public_html/api/.htaccess (cPanel)
+# Or: /backend/api/.htaccess (during local development)
+# ====================================================================
+
+# Enable mod_rewrite
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteBase /api/
+    
+    # SECURITY: Block direct access to sensitive files
+    <FilesMatch "\.(env|json|log|sql|git)$">
+        Deny from all
+    </FilesMatch>
+    
+    # SECURITY: Block directory listing
+    Options -Indexes
+    
+    # Allow static files (images, CSS, JS, etc.)
+    RewriteCond %{REQUEST_FILENAME} -f
+    RewriteRule ^ - [QSA,L]
+    
+    # Allow directories
+    RewriteCond %{REQUEST_FILENAME} -d
+    RewriteRule ^ - [QSA,L]
+    
+    # Route all requests to index.php (router)
+    RewriteRule ^(.*)$ index.php [QSA,L]
+</IfModule>
+
+# ====================================================================
+# SECURITY HEADERS
+# ====================================================================
+<IfModule mod_headers.c>
+    # Prevent MIME type sniffing
+    Header set X-Content-Type-Options "nosniff"
+    
+    # Prevent clickjacking attacks
+    Header set X-Frame-Options "DENY"
+    
+    # Enable XSS protection
+    Header set X-XSS-Protection "1; mode=block"
+    
+    # Enforce HTTPS
+    Header set Strict-Transport-Security "max-age=31536000; includeSubDomains"
+    
+    # Content Security Policy
+    Header set Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline';"
+</IfModule>
+
+# ====================================================================
+# PHP CONFIGURATION
+# ====================================================================
+<IfModule mod_php.c>
+    # Increase upload limits (adjust as needed)
+    php_value upload_max_filesize 50M
+    php_value post_max_size 50M
+    
+    # Increase execution time
+    php_value max_execution_time 300
+    php_value max_input_time 300
+    
+    # Memory limit
+    php_value memory_limit 256M
+    
+    # Disable directory listing
+    php_value disable_functions "passthru, exec, shell_exec, system"
+    
+    # Turn off expose PHP version
+    php_flag expose_php Off
+</IfModule>
+
+# ====================================================================
+# COMPRESSION & CACHING
+# ====================================================================
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html text/plain text/xml application/json text/javascript application/javascript
+</IfModule>
+
+# Browser caching for static files
+<IfModule mod_expires.c>
+    ExpiresActive On
+    
+    # Cache images for 1 year
+    ExpiresByType image/jpeg "access plus 1 year"
+    ExpiresByType image/gif "access plus 1 year"
+    ExpiresByType image/png "access plus 1 year"
+    ExpiresByType image/webp "access plus 1 year"
+    
+    # Cache CSS and JS for 1 month
+    ExpiresByType text/css "access plus 1 month"
+    ExpiresByType application/javascript "access plus 1 month"
+    
+    # Don't cache HTML and JSON
+    ExpiresByType text/html "access plus 0 seconds"
+    ExpiresByType application/json "access plus 0 seconds"
+</IfModule>

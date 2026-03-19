@@ -22,12 +22,21 @@ npm-debug.log*
 yarn-debug.log*
 pnpm-debug.log*
 
-# secrets
-.env*
+# secrets & environment files (CRITICAL - DO NOT COMMIT)
+.env
+.env.local
+.env.production
+.env.production.local
+.env.*.local
+.env.*.production
+
+# JSON files (exclude all except config files)
 *.json
 !package.json
 !tsconfig.json
 !package-lock.json
+!next.config.js
+!vercel.json
 
 # typescript
 *.tsbuildinfo
