@@ -2,8 +2,6 @@
   "buildCommand": "next build",
   "outputDirectory": ".next",
   "framework": "nextjs",
-  "nodeVersion": "18.x",
-  "public": false,
   "env": {
     "NEXT_PUBLIC_SUPABASE_URL": "@next_public_supabase_url",
     "NEXT_PUBLIC_SUPABASE_ANON_KEY": "@next_public_supabase_anon_key",
@@ -43,12 +41,6 @@
           "value": "strict-origin-when-cross-origin"
         }
       ]
-    }
-  ],
-  "rewrites": [
-    {
-      "source": "/api/:path*",
-      "destination": "https://salemfarmmango.com/api/:path*"
     }
   ]
 }
