@@ -7,7 +7,7 @@ export async function POST(request: NextRequest) {
         const body = await request.json();
 
         // Forward to PHP backend
-        const response = await fetch('http://127.0.0.1/SFM/backend/auth/login.php', {
+        const response = await fetch('http://salemfarmmango.com/auth/login.php', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(body)

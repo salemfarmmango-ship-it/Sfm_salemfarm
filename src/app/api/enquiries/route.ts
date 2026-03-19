@@ -8,7 +8,7 @@ export async function POST(request: Request) {
 
         // Use absolute URL to call the PHP backend running on XAMPP Apache
         // Using 127.0.0.1 explicitly to prevent Node 18+ IPv6 (::1) lookup failures
-        const apiUrl = `http://127.0.0.1/SFM/backend/api/enquiries.php?type=${type}`;
+        const apiUrl = `http://salemfarmmango.com/api/enquiries.php?type=${type}`;
 
         const response = await fetch(apiUrl, {
             method: 'POST',

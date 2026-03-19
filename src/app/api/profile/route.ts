@@ -3,7 +3,7 @@ import { cookies } from 'next/headers';
 
 export const dynamic = 'force-dynamic';
 
-const BACKEND_URL = 'http://127.0.0.1/SFM/backend/api/profiles.php';
+const BACKEND_URL = 'http://salemfarmmango.com/api/profiles.php';
 
 async function getAuthHeaders() {
     const token = cookies().get('sfm_token')?.value;

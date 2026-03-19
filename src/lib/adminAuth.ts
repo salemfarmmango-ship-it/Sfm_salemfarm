@@ -14,7 +14,7 @@ export async function verifyAdmin(request: NextRequest): Promise<{ authenticated
         }
 
         // Call the PHP verification endpoint
-        const res = await fetch(`http://127.0.0.1/SFM/backend/api/admin-verify.php?id=${encodeURIComponent(adminId)}`, {
+        const res = await fetch(`http://salemfarmmango.com/api/admin-verify.php?id=${encodeURIComponent(adminId)}`, {
             cache: 'no-store'
         });
 

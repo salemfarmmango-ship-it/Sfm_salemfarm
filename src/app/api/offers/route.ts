@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 
-const BACKEND_URL = 'http://127.0.0.1/SFM/backend/api/offers.php';
+const BACKEND_URL = 'http://salemfarmmango.com/api/offers.php';
 
 export async function GET(request: NextRequest) {
     try {

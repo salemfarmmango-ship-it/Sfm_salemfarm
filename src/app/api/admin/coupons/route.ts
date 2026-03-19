@@ -3,7 +3,7 @@ import { verifyAdmin, unauthorizedResponse } from '@/lib/adminAuth';
 
 export const dynamic = 'force-dynamic';
 
-const BACKEND_URL = 'http://127.0.0.1/SFM/backend/api/coupons.php';
+const BACKEND_URL = 'http://salemfarmmango.com/api/coupons.php';
 
 export async function GET(request: NextRequest) {
     try {

@@ -10,7 +10,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Forward to PHP backend
-        const response = await fetch('http://127.0.0.1/SFM/backend/api/subscribers.php', {
+        const response = await fetch('http://salemfarmmango.com/api/subscribers.php', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email })

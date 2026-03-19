@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
             targetTokens = tokens;
         } else {
             // Fetch tokens from PHP backend instead of Supabase
-            let url = 'http://127.0.0.1/SFM/backend/api/notifications.php?action=list';
+            let url = 'http://salemfarmmango.com/api/notifications.php?action=list';
             if (userIds && userIds.length > 0) {
                 url += `&userIds=${userIds.join(',')}`;
             }
@@ -120,7 +120,7 @@ export async function POST(request: NextRequest) {
 
         // Clean up invalid tokens via PHP backend
         if (failedTokens.length > 0) {
-            await fetch('http://127.0.0.1/SFM/backend/api/notifications.php', {
+            await fetch('http://salemfarmmango.com/api/notifications.php', {
                 method: 'DELETE',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ tokens: failedTokens })
@@ -147,7 +147,7 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
     try {
-        const response = await fetch('http://127.0.0.1/SFM/backend/api/notifications.php?action=list');
+        const response = await fetch('http://salemfarmmango.com/api/notifications.php?action=list');
         const data = await response.json();
 
         return NextResponse.json({

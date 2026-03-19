@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: 'Order ID is required' }, { status: 400 });
         }
 
-        const updateRes = await fetch(`http://127.0.0.1/SFM/backend/api/orders.php`, {
+        const updateRes = await fetch(`http://salemfarmmango.com/api/orders.php`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',

@@ -4,7 +4,7 @@ export const dynamic = 'force-dynamic';
 
 export async function GET() {
     try {
-        const res = await fetch('http://127.0.0.1/SFM/backend/api/public-settings.php', {
+        const res = await fetch('http://salemfarmmango.com/api/public-settings.php', {
             cache: 'no-store',
         });
 

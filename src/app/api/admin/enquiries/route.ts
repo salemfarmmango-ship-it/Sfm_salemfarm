@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
         }
 
         const { searchParams } = new URL(request.url);
-        const res = await fetch(`http://127.0.0.1/SFM/backend/api/enquiries.php?${searchParams.toString()}`, {
+        const res = await fetch(`http://salemfarmmango.com/api/enquiries.php?${searchParams.toString()}`, {
             cache: 'no-store',
             headers: {
                 'Authorization': `Bearer ${token}`,
@@ -37,7 +37,7 @@ export async function PATCH(request: NextRequest) {
         }
 
         const body = await request.json();
-        const res = await fetch('http://127.0.0.1/SFM/backend/api/enquiries.php', {
+        const res = await fetch('http://salemfarmmango.com/api/enquiries.php', {
             method: 'PUT',
             headers: { 
                 'Content-Type': 'application/json',
@@ -65,7 +65,7 @@ export async function DELETE(request: NextRequest) {
         }
 
         const body = await request.json();
-        const res = await fetch('http://127.0.0.1/SFM/backend/api/enquiries.php', {
+        const res = await fetch('http://salemfarmmango.com/api/enquiries.php', {
             method: 'DELETE',
             headers: { 
                 'Content-Type': 'application/json',

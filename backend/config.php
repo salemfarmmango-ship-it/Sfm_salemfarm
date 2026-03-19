@@ -38,21 +38,31 @@ $allowedOrigins = [
     'https://salemfarmmango.com',
     'https://www.salemfarmmango.com',
     'https://salemfarmmango.vercel.app',
-    'http://localhost:3000',  // Development frontend
-    'http://localhost:3001'   // Local backend
+    'http://localhost:3000',
+    'http://localhost:3001',
+    'http://127.0.0.1:3000',
+    'http://127.0.0.1:3001'
 ];
 
+// Get origin from request
 $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
-if (in_array($origin, $allowedOrigins)) {
+
+// Set CORS headers for allowed origins
+if (!empty($origin) && in_array($origin, $allowedOrigins)) {
     header("Access-Control-Allow-Origin: " . $origin);
+    header("Access-Control-Allow-Credentials: true");
+} elseif (empty($origin)) {
+    // Allow direct browser access
+    header("Access-Control-Allow-Origin: *");
 }
 
-header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");
-header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With");
-header("Access-Control-Allow-Credentials: true");
+// Always allow these headers for all requests
+header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS, PATCH");
+header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With, Accept");
+header("Access-Control-Max-Age: 86400");
 
 // Handle preflight OPTIONS requests
-if (isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
     exit();
 }

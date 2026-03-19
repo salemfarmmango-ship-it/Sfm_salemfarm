@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
             return unauthorizedResponse();
         }
 
-        const res = await fetch('http://127.0.0.1/SFM/backend/api/stats.php', {
+        const res = await fetch('http://salemfarmmango.com/api/stats.php', {
             cache: 'no-store',
             headers: {
                 'Authorization': `Bearer ${token}`,

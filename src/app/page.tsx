@@ -63,7 +63,7 @@ export default async function Home() {
     // 1. Fetch categories from MySQL Backend
     let mysqlCategories: any[] = [];
     try {
-        const res = await fetch('http://127.0.0.1/SFM/backend/api/categories.php', { cache: 'no-store' });
+        const res = await fetch('http://salemfarmmango.com/api/categories.php', { cache: 'no-store' });
         if (res.ok) mysqlCategories = await res.json();
     } catch (e) { console.error('Error fetching categories from PHP', e); }
 
@@ -73,7 +73,7 @@ export default async function Home() {
     // 2. Fetch Featured Products from PHP API
     let featuredProducts: ProductCardProps[] = [];
     try {
-        const res = await fetch('http://127.0.0.1/SFM/backend/api/products.php?is_featured=true', { cache: 'no-store' });
+        const res = await fetch('http://salemfarmmango.com/api/products.php?is_featured=true', { cache: 'no-store' });
         if (res.ok) {
             const data = await res.json();
             const dbFeatured = Array.isArray(data) ? data : [];
@@ -84,7 +84,7 @@ export default async function Home() {
     // 3. Fresh Arrivals
     let recentProducts: ProductCardProps[] = [];
     try {
-        const res = await fetch('http://127.0.0.1/SFM/backend/api/products.php?limit=12', { cache: 'no-store' });
+        const res = await fetch('http://salemfarmmango.com/api/products.php?limit=12', { cache: 'no-store' });
         if (res.ok) {
             const data = await res.json();
             const dbRecent = Array.isArray(data) ? data : [];
@@ -95,21 +95,21 @@ export default async function Home() {
     // 4. Fetch Published Blogs
     let blogs: any[] = [];
     try {
-        const res = await fetch('http://127.0.0.1/SFM/backend/api/blogs.php?status=published', { cache: 'no-store' });
+        const res = await fetch('http://salemfarmmango.com/api/blogs.php?status=published', { cache: 'no-store' });
         if (res.ok) blogs = await res.json();
     } catch (e) { console.error('Error fetching blogs for home', e); }
 
     // 5. Fetch Active Offers
     let offers: any[] = [];
     try {
-        const res = await fetch('http://127.0.0.1/SFM/backend/api/offers.php', { cache: 'no-store' });
+        const res = await fetch('http://salemfarmmango.com/api/offers.php', { cache: 'no-store' });
         if (res.ok) offers = await res.json();
     } catch (e) { console.error('Error fetching offers for home', e); }
 
     // 6. Fetch Public Settings (including Instagram posts)
     let publicSettings: any = {};
     try {
-        const res = await fetch('http://127.0.0.1/SFM/backend/api/public-settings.php', { cache: 'no-store' });
+        const res = await fetch('http://salemfarmmango.com/api/public-settings.php', { cache: 'no-store' });
         if (res.ok) {
             const data = await res.json();
             publicSettings = data.settings || {};

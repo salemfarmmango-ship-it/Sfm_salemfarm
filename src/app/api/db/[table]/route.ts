@@ -7,7 +7,7 @@ export async function GET(
     const table = params.table.endsWith('.php') ? params.table : `${params.table}.php`;
     const { searchParams } = new URL(request.url);
     const queryString = searchParams.toString();
-    const targetUrl = `http://127.0.0.1/SFM/backend/api/${table}${queryString ? `?${queryString}` : ''}`;
+    const targetUrl = `http://salemfarmmango.com/api/${table}${queryString ? `?${queryString}` : ''}`;
 
     try {
         const response = await fetch(targetUrl, {
@@ -32,7 +32,7 @@ export async function POST(
 ) {
     const table = params.table.endsWith('.php') ? params.table : `${params.table}.php`;
     const body = await request.json();
-    const targetUrl = `http://127.0.0.1/SFM/backend/api/${table}`;
+    const targetUrl = `http://salemfarmmango.com/api/${table}`;
 
     try {
         const response = await fetch(targetUrl, {
@@ -60,7 +60,7 @@ export async function PUT(
     const body = await request.json();
     const { searchParams } = new URL(request.url);
     const queryString = searchParams.toString();
-    const targetUrl = `http://127.0.0.1/SFM/backend/api/${table}${queryString ? `?${queryString}` : ''}`;
+    const targetUrl = `http://salemfarmmango.com/api/${table}${queryString ? `?${queryString}` : ''}`;
 
     try {
         const response = await fetch(targetUrl, {
@@ -87,7 +87,7 @@ export async function DELETE(
     const table = params.table.endsWith('.php') ? params.table : `${params.table}.php`;
     const { searchParams } = new URL(request.url);
     const queryString = searchParams.toString();
-    const targetUrl = `http://127.0.0.1/SFM/backend/api/${table}${queryString ? `?${queryString}` : ''}`;
+    const targetUrl = `http://salemfarmmango.com/api/${table}${queryString ? `?${queryString}` : ''}`;
 
     try {
         const response = await fetch(targetUrl, {

@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
         }
 
         const { searchParams } = new URL(request.url);
-        const res = await fetch(`http://127.0.0.1/SFM/backend/api/blogs.php?${searchParams.toString()}`, {
+        const res = await fetch(`http://salemfarmmango.com/api/blogs.php?${searchParams.toString()}`, {
             cache: 'no-store',
             headers: {
                 'Authorization': `Bearer ${token}`,
@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
 
         const body = await request.json();
 
-        const res = await fetch('http://127.0.0.1/SFM/backend/api/blogs.php', {
+        const res = await fetch('http://salemfarmmango.com/api/blogs.php', {
             method: 'POST',
             headers: { 
                 'Content-Type': 'application/json',

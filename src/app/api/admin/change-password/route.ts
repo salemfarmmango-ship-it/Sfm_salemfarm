@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
         const body = await request.json();
 
         // Proxy to PHP backend
-        const res = await fetch('http://127.0.0.1/SFM/backend/auth/change-password.php', {
+        const res = await fetch('http://salemfarmmango.com/auth/change-password.php', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(body)

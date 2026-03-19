@@ -13,7 +13,7 @@ export async function GET(
             return unauthorizedResponse();
         }
 
-        const res = await fetch(`http://127.0.0.1/SFM/backend/api/categories.php?id=${params.id}`, {
+        const res = await fetch(`http://salemfarmmango.com/api/categories.php?id=${params.id}`, {
             cache: 'no-store',
             headers: {
                 'Authorization': `Bearer ${token}`,
@@ -46,7 +46,7 @@ export async function PUT(
         const body = await request.json();
 
         // Proxy to PHP backend
-        const res = await fetch(`http://127.0.0.1/SFM/backend/api/categories.php?id=${params.id}`, {
+        const res = await fetch(`http://salemfarmmango.com/api/categories.php?id=${params.id}`, {
             method: 'PUT',
             headers: { 
                 'Content-Type': 'application/json',
@@ -80,7 +80,7 @@ export async function DELETE(
         }
 
         // Proxy to PHP backend
-        const res = await fetch(`http://127.0.0.1/SFM/backend/api/categories.php?id=${params.id}`, {
+        const res = await fetch(`http://salemfarmmango.com/api/categories.php?id=${params.id}`, {
             method: 'DELETE',
             headers: {
                 'Authorization': `Bearer ${token}`,

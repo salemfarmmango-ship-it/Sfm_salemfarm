@@ -3,7 +3,7 @@ export const dynamic = 'force-dynamic';
 
 export async function GET() {
     try {
-        const response = await fetch('http://127.0.0.1/SFM/backend/api/categories.php', {
+        const response = await fetch('http://salemfarmmango.com/api/categories.php', {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json',

@@ -10,7 +10,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Proxy to PHP backend for admin login (checks sfm.users with role='admin')
-        const res = await fetch('http://127.0.0.1/SFM/backend/auth/admin-login.php', {
+        const res = await fetch('http://salemfarmmango.com/auth/admin-login.php', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email, password })
