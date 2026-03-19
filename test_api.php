@@ -1,5 +1,5 @@
 <?php
-$url = "http://localhost/SFM/backend/api/blogs.php?status=published";
+$url = "http://salemfarmmango.com/api/blogs.php?status=published";
 $ch = curl_init($url);
 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 $response = curl_exec($ch);

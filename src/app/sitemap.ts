@@ -23,7 +23,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
     try {
         // Fetch all generic products available
-        const res = await fetch('http://localhost/SFM/backend/api/products.php', { cache: 'no-store' });
+        const res = await fetch('http://salemfarmmango.com/api/products.php', { cache: 'no-store' });
         if (!res.ok) throw new Error('Failed to fetch products for sitemap');
         
         const products = await res.json();

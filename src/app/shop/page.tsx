@@ -11,7 +11,7 @@ export default async function ShopPage({ searchParams }: { searchParams: { [key:
     const searchQuery = searchParams?.search as string | undefined;
     let dbProducts: any[] = [];
     try {
-        const url = new URL('http://localhost/SFM/backend/api/products.php');
+        const url = new URL('http://salemfarmmango.com/api/products.php');
         if (searchQuery) url.searchParams.append('search', searchQuery);
         
         const res = await fetch(url.toString(), { cache: 'no-store' });
@@ -24,7 +24,7 @@ export default async function ShopPage({ searchParams }: { searchParams: { [key:
     // 2. Fetch categories from MySQL Backend
     let mysqlCategories: any[] = [];
     try {
-        const res = await fetch('http://localhost/SFM/backend/api/categories.php', { cache: 'no-store' });
+        const res = await fetch('http://salemfarmmango.com/api/categories.php', { cache: 'no-store' });
         if (res.ok) mysqlCategories = await res.json();
     } catch (e) { console.error('Error fetching categories from PHP', e); }
 
@@ -60,7 +60,7 @@ export default async function ShopPage({ searchParams }: { searchParams: { [key:
 
         // Fix relative image paths from backend
         if (image && !image.startsWith('http') && !image.startsWith('data:')) {
-            image = `http://localhost/SFM/backend/${image.startsWith('/') ? image.substring(1) : image}`;
+            image = `http://salemfarmmango.com/${image.startsWith('/') ? image.substring(1) : image}`;
         }
 
         return {

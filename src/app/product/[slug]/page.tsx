@@ -10,7 +10,7 @@ import { ProductSpecifications } from '@/components/product/ProductSpecification
 
 export const dynamic = 'force-dynamic';
 
-const BACKEND_URL = 'http://localhost/SFM/backend/api';
+const BACKEND_URL = 'http://salemfarmmango.com/api';
 
 async function getProductData(id: string) {
     try {

@@ -36,7 +36,7 @@ const transformProduct = (p: any, categoryMap: Map<number, string>): ProductCard
 
     // Fix relative image paths from backend
     if (image && !image.startsWith('http') && !image.startsWith('data:')) {
-        image = `http://localhost/SFM/backend/${image.startsWith('/') ? image.substring(1) : image}`;
+        image = `http://salemfarmmango.com/${image.startsWith('/') ? image.substring(1) : image}`;
     }
 
     return {
